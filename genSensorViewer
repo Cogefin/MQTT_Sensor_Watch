@@ -1,0 +1,515 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[5]:
+
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import flet as ft
+from flet_multi_page import subPage
+
+import yaml
+import sys
+
+parts_file_name="plugin/genSensorViewer.js"
+
+help_file_name="Help/genSensorViewer.yaml"
+
+
+sensorType = [
+    'DUMMY',
+    '3軸加速度',
+    '磁界',
+    '位置情報',
+    '3軸ジャイロ',
+    '光',
+    '気圧',
+    '近接',
+    '重力',
+    '3軸加速度',
+    '回転',
+    '湿度',
+    '気温',
+    '電圧',
+    '電流',
+    '色彩',
+    '単純デジタル',
+    '角度',
+    '1軸ジャイロ',
+    '距離',
+    'LARGE_INT',
+    'ホコリ',
+    '赤外線リモコン',
+    '位置',
+    '時刻',
+    '速度(ノット)',
+    '単純アナログ'
+]
+
+def open_config_and_output_file(config_file_name, output_file_name):
+    config = {}
+    try:
+        with open(config_file_name, mode='r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+    except Exception as e:
+        error = 'Exception occurred while loading config file of this application...'
+        return [error , config, null]
+    try:
+        outputFile = open(output_file_name, 'w', encoding='UTF-8')
+    except Exception as e:
+        error = 'Exception occurred while open output file...'
+        return [error , config, null]
+    return ['', config, outputFile]
+
+def load_init_file(help_file_name, parts_file_name):
+    help = {}
+    parts = []
+    try:
+        with open(parts_file_name, mode='r', encoding='utf-8') as f:
+            try:
+                tmp = f.readlines()
+            except Exception as e:
+                error = 'Exception occurred while loading parts file of this application...'
+                return [error, help, '']
+    except Exception as e:
+        error = 'Exception occurred while loading parts file of this application...'
+        return [error, help, '']
+    try:
+        with open(help_file_name, mode='r', encoding='utf-8') as f:
+            help = yaml.safe_load(f)
+    except Exception as e:
+        error = 'Exception occurred while loading config file of this application...'
+        return [error , help, '']
+    
+    for i in tmp:
+        parts.append(i.replace('\n',''))
+    return ['', help, parts]
+
+def outputHTML(config, parts, outputFile):
+    print('<html>', file=outputFile)
+    print('    <head>', file=outputFile)
+    print('        <meta charset=\"UTF-8\">', file=outputFile)
+    print('        <meta name=\"viewport\" content=\"width=device-width\">', file=outputFile)
+    if int(config['interval'])!=0:
+        print('        <meta http-equiv=\"refresh\" content=\"' + str(config['interval']) + '; URL=\">', file=outputFile)
+    print('        <title>' + config['pageTitle'] + '</title>', file=outputFile)
+    print('        <script type=\"text/javascript\" src=\"https://www.gstatic.com/charts/loader.js\"></script>', file=outputFile)
+    print('        <script type=\"text/javascript\" src=\"https://unpkg.com/simple-statistics@7.8.3/dist/simple-statistics.min.js\"></script>', file=outputFile)
+    print('        <script src=\"https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.min.js\" integrity=\"sha512-VYs2RuvWreNg7oouVhZ/9bEvdPgyd5L2iCPCB8+8Qks/PHbmnc82TQOEctYoEKPveJGML8s+3NGcUEZYJrFIqg==\" crossorigin=\"anonymous\" referrerpolicy=\"no-referrer\" ></script>', file=outputFile)
+    for i in range(len(config['libraries'])):
+        tmp='        <script '
+        if config['libraries'][i]['type']!='':
+            tmp=tmp+'type=\"'+config['libraries'][i]['type']+'\" '
+        if config['libraries'][i]['src']!='':
+            tmp=tmp+'src=\"'+config['libraries'][i]['src']+'\" '
+        if config['libraries'][i]['integrity']!='':
+            tmp=tmp+'integrity=\"'+config['libraries'][i]['integrity']+'\" '
+        if config['libraries'][i]['crossorigin']!='':
+            tmp=tmp+'crossorigin=\"'+config['libraries'][i]['crossorigin']+'\" '
+        if config['libraries'][i]['referrerpolicy']!='':
+            tmp=tmp+'referrerpolicy=\"'+config['libraries'][i]['referrerpolicy']+'\" '
+        tmp= tmp+'></script>'
+        print(tmp, file=outputFile)
+    print('        <script type="text/javascript">', file=outputFile)
+    print('', file=outputFile)
+    print('', file=outputFile)
+    print('', file=outputFile)
+    print('/*', file=outputFile)
+    print(' * カスタマイズが必要な各種変数とパラメータ', file=outputFile)
+    print(' */', file=outputFile)
+    print('var target = [', file=outputFile)
+    for i in range(len(config['target'])):
+        print('    {', file=outputFile)
+        print('        TOPIC : '+'\''+config['target'][i]['topic']+'\''+',', file=outputFile)
+        print('        TYPE  : '+str(config['target'][i]['type'])+',', file=outputFile)
+        print('        ID    : '+str(config['target'][i]['id']), file=outputFile)
+        if (i == len(config['target'])-1):
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('];', file=outputFile)
+    print('/*', file=outputFile)
+    print(' * 統計データ抽出用の変数', file=outputFile)
+    print(' */', file=outputFile)
+    print('var statisticsOptions = [', file=outputFile)
+    for i in range(len(config['statisticsOptions'])):
+        print('    {', file=outputFile)
+        print('        dataSource      : '+str(config['statisticsOptions'][i]['dataSource'])+',', file=outputFile)
+        print('        label           : '+'\''+config['statisticsOptions'][i]['label']+'\''+',', file=outputFile)
+        print('        statisticsUnits : '+str(config['statisticsOptions'][i]['statisticsUnits']), file=outputFile)
+        if (i == len(config['statisticsOptions'])-1):
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('];', file=outputFile)
+    print('/*', file=outputFile)
+    print(' * データ系列抽出用のオプションを格納する変数', file=outputFile)
+    print(' */', file=outputFile)
+    print('var preProcessOptions = [', file=outputFile)
+    for i in range(len(config['preProcessOptions'])):
+        print('    {', file=outputFile)
+        print('        dataSource : '+str(config['preProcessOptions'][i]['dataSource'])+',', file=outputFile)
+        print('        preprocess : '+str(config['preProcessOptions'][i]['preprocess'])+',', file=outputFile)
+        print('        option     : {', file=outputFile)
+        print('            n : '+str(config['preProcessOptions'][i]['option']['n']), file=outputFile)
+        print('        }', file=outputFile)
+        if (i == len(config['preProcessOptions'])-1):
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('];', file=outputFile)
+    print('/*', file=outputFile)
+    print(' * 時系列グラフを作成するためのパラメータ', file=outputFile)
+    print(' */', file=outputFile)
+    print('var lineChart_map = [', file=outputFile)
+    for i in range(len(config['lineChart_map'])):
+        print('    {', file=outputFile)
+        output='        label : ['
+        for j in range(len(config['lineChart_map'][i]['label'])):
+            output = output + '\''+config['lineChart_map'][i]['label'][j]+'\''
+            if (j != len(config['lineChart_map'][i]['label'])-1):
+                output = output +','
+            else:
+                output = output +'],'
+        print(output, file=outputFile)
+        output='        dataSource : ['
+        for j in range(len(config['lineChart_map'][i]['dataSource'])):
+            output = output + str(config['lineChart_map'][i]['dataSource'][j])
+            if (j != len(config['lineChart_map'][i]['dataSource'])-1):
+                output = output +','
+            else:
+                output = output +']'
+        print(output, file=outputFile)
+        if (i == len(config['lineChart_map'])-1):
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('];', file=outputFile)
+    print('var lineChart_options = [', file=outputFile)
+    for i in range(len(config['lineChart_options'])):
+        print('    {', file=outputFile)
+        print('        title: \'' + config['lineChart_options'][i]['title']+'\',', file=outputFile)
+        print('        legend: { position: \'' + config['lineChart_options'][i]['legend']['position']+'\' },', file=outputFile)
+        if config['lineChart_options'][i]['interpolateNulls']:
+            print('        interpolateNulls: true,', file=outputFile)
+        else:
+            print('        interpolateNulls: false,', file=outputFile)
+        print('        hAxis: {', file=outputFile)
+        print('            title: \'' + config['lineChart_options'][i]['hAxis']['title']+'\'', file=outputFile)
+        print('        },', file=outputFile)
+        print('        vAxis: {', file=outputFile)
+        print('            title: \'' + config['lineChart_options'][i]['vAxis']['title']+'\'', file=outputFile)
+        print('        }', file=outputFile)
+        if (i == len(config['lineChart_options'])-1):
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('];', file=outputFile)
+    print('/*', file=outputFile)
+    print(' * 度数分布を作成するためのパラメータ', file=outputFile)
+    print(' */', file=outputFile)
+    print('var fdChart_options = [', file=outputFile)
+    for i in range(len(config['fdChart_options'])):
+        print('    {', file=outputFile)
+        print('        title: \'' + config['fdChart_options'][i]['title']+'\',', file=outputFile)
+        print('        legend: { position: \'' + config['fdChart_options'][i]['legend']['position']+'\' },', file=outputFile)
+        print('        hAxis: {', file=outputFile)
+        print('            title: \'' + config['fdChart_options'][i]['hAxis']['title']+'\'', file=outputFile)
+        print('        },', file=outputFile)
+        print('        vAxis: {', file=outputFile)
+        print('            title: \'' + config['fdChart_options'][i]['vAxis']['title']+'\'', file=outputFile)
+        print('        }', file=outputFile)
+        if (i == len(config['fdChart_options'])-1):
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('];', file=outputFile)
+    print('/*', file=outputFile)
+    print(' * 相関関係分析用変数', file=outputFile)
+    print(' */', file=outputFile)
+    print('var correlation_map = [', file=outputFile)
+    for i in range(len(config['correlation_map'])):
+        print('    {', file=outputFile)
+        output='        label : ['
+        for j in range(len(config['correlation_map'][i]['label'])):
+            output = output + '\''+config['correlation_map'][i]['label'][j]+'\''
+            if (j != len(config['correlation_map'][i]['label'])-1):
+                output = output +','
+            else:
+                output = output +'],'
+        print(output, file=outputFile)
+        output='        dataSource : ['
+        for j in range(len(config['correlation_map'][i]['dataSource'])):
+            output = output + str(config['correlation_map'][i]['dataSource'][j])
+            if (j != len(config['correlation_map'][i]['dataSource'])-1):
+                output = output +','
+            else:
+                output = output +']'
+        print(output, file=outputFile)
+        if (i == len(config['correlation_map'])-1):
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('];', file=outputFile)
+    print('var correlation_options = [', file=outputFile)
+    for i in range(len(config['correlation_options'])):
+        print('    {', file=outputFile)
+        print('        title: \'' + config['correlation_options'][i]['title']+'\',', file=outputFile)
+        print('        legend: { position: \'' + config['correlation_options'][i]['legend']['position']+'\' },', file=outputFile)
+        print('        hAxis: {', file=outputFile)
+        print('            title: \'' + config['correlation_options'][i]['hAxis']['title']+'\'', file=outputFile)
+        print('        },', file=outputFile)
+        print('        vAxis: {', file=outputFile)
+        print('            title: \'' + config['correlation_options'][i]['vAxis']['title']+'\'', file=outputFile)
+        print('        }', file=outputFile)
+        if (i == len(config['correlation_options'])-1):
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('];', file=outputFile)
+    print('var fileType = ' + str(config['fileType'])+';', file=outputFile)
+    print('var dataFileName = \"' + config['dataFileName']+'\";', file=outputFile)
+    print('var timeRange = ' + str(config['timeRange'])+';', file=outputFile)
+    print('var numOfDigits = ' + str(config['numOfDigits'])+';', file=outputFile)
+    print('var alertMessages = [', file=outputFile)
+    for i in range(len(config['alertMessages'])):
+        if (i != len(config['alertMessages'])-1):
+            print('    \'' + config['alertMessages'][i] + '\',', file=outputFile)
+        else:
+            print('    \'' + config['alertMessages'][i] + '\'', file=outputFile)
+    print('];', file=outputFile)
+    for i in range(len(config['checkFunks'])):
+        name = config['checkFunks'][i]
+        print('function ' + name + '(data, stats) {', file=outputFile)
+        print(config[name], file=outputFile)
+        print('}', file=outputFile)
+    print('var checkFunctionList = [', file=outputFile)
+    for i in range(len(config['checkFunks'])):
+        if (i != len(config['checkFunks'])-1):
+            print('     '+ config['checkFunks'][i] + ',', file=outputFile)
+        else:
+            print('     '+ config['checkFunks'][i] , file=outputFile)
+    print('];', file=outputFile)
+    #
+    #
+    #
+    for i in parts:
+        print(i, file=outputFile)
+    #
+    #
+    #
+    print('        </script>', file=outputFile)
+    print('    </head>', file=outputFile)
+    print('    <body>', file=outputFile)
+    print('        <h1>'+ config['pageTitle']+ '</h1>', file=outputFile)
+    print('        <HR SIZE=\"1\">', file=outputFile)
+    print('        <h2>センサ情報</h2>', file=outputFile)
+    for i in range(len(config['target'])):
+        print('        <h3>センサ'+ str(i)+ '</h3>', file=outputFile)
+        print('        <ul>', file=outputFile)
+        print('            <li>MQTTトピック : \'' + config['target'][i]['topic'] + '\'</li>', file=outputFile)
+        print('            <li>センサ種別 : ' + sensorType[config['target'][i]['type']] + '</li>', file=outputFile)
+        print('            <li>センサ番号 : ' + str(config['target'][i]['type']) + '</li>', file=outputFile)
+        print('        </ul>', file=outputFile)
+    print('        <HR SIZE=\"1\">', file=outputFile)
+    if ((0 < len(config['correlation_map'])) or (0 < len(config['fdChart_options'])) or  (0 < len(config['lineChart_map'])) ):
+        print('        <h2>グラフ</h2>', file=outputFile)
+    if (0 < len(config['lineChart_map'])):
+        print('        <h3>時系列グラフ</h3>', file=outputFile)
+    for i in range(len(config['lineChart_map'])):
+        print('            <div id=\"curve_chart'+str(i)+'\" style=\"width: 900px; height: 500px\"></div>', file=outputFile)
+    if (0 < len(config['fdChart_options'])):
+        print('        <h3>度数分布</h3>', file=outputFile)
+    for i in range(len(config['fdChart_options'])):
+        print('            <div id=\"frequency_distribution'+str(i)+'\" style=\"width: 900px; height: 500px\"></div>', file=outputFile)
+    if (0 < len(config['correlation_map'])):
+        print('        <h3>散布図</h3>', file=outputFile)
+    for i in range(len(config['correlation_map'])):
+        print('            <div id=\"scatter'+str(i)+'\" style=\"width: 900px; height:  500px\"></div>', file=outputFile)
+        print('            相関係数 : <div id=\"correlation'+str(i)+'\"></div>', file=outputFile)
+    if ((0 < len(config['correlation_map'])) or (0 < len(config['fdChart_options'])) or  (0 < len(config['lineChart_map'])) ):
+        print('        <HR SIZE=\"1\">', file=outputFile)
+    if ( 0 < len(config['statisticsOptions'])):
+        print('        <h2>統計値</h2>', file=outputFile)
+        print('        <table border=\"1\">', file=outputFile)
+        print('            <tr>', file=outputFile)
+        print('                <th>データ</th>', file=outputFile)
+        print('                <th>最小</th>', file=outputFile)
+        print('                <th>最大</th>', file=outputFile)
+        print('                <th>中央値</th>', file=outputFile)
+        print('                <th>平均値</th>', file=outputFile)
+        print('                <th>分散(自由度=n)</th>', file=outputFile)
+        print('                <th>標準偏差(自由度=n)</th>', file=outputFile)
+        print('                <th>標本分散(自由度=n-1)</th>', file=outputFile)
+        print('                <th>標本標準偏差(自由度=n-1)</th>', file=outputFile)
+        print('                <th>変動係数</th>', file=outputFile)
+        print('                <th>中央絶対偏差</th>', file=outputFile)
+        print('                <th>二乗平均平方根</th>', file=outputFile)
+        print('            </tr>', file=outputFile)
+        for i in range(len(config['statisticsOptions'])):
+            print('            <tr>', file=outputFile)
+            print('                <td><div id = \"dataName'+str(i)+'\" > </div></td>', file=outputFile)
+            print('                <td><div id = \"min'+str(i)+'\" > </div></td>', file=outputFile)
+            print('                <td><div id = \"max'+str(i)+'\" > </div></td>', file=outputFile)
+            print('                <td><div id = \"median'+str(i)+'\" > </div></td>', file=outputFile)
+            print('                <td><div id = \"average'+str(i)+'\" > </div></td>', file=outputFile)
+            print('                <td><div id = \"variance'+str(i)+'\" > </div></td>', file=outputFile)
+            print('                <td><div id = \"standard_deviation'+str(i)+'\" > </div></td>', file=outputFile)
+            print('                <td><div id = \"sample_variance'+str(i)+'\" > </div></td>', file=outputFile)
+            print('                <td><div id = \"sample_standard_deviation'+str(i)+'\" > </div></td>', file=outputFile)
+            print('                <td><div id = \"coefficient_variation'+str(i)+'\" > </div></td>', file=outputFile)
+            print('                <td><div id = \"medAD'+str(i)+'\" > </div></td>', file=outputFile)
+            print('                <td><div id = \"RMS'+str(i)+'\" > </div></td>', file=outputFile)
+            print('            </tr>', file=outputFile)
+        print('        </table>', file=outputFile)
+        print('        <HR SIZE=\"1\">', file=outputFile)
+    if (0<len(config['checkFunks'])):
+        print('        <h2>各種メッセージ</h2>', file=outputFile)
+        print('        <div id = "messages" > </div>', file=outputFile)
+    print('    </body>', file=outputFile)
+    print('</html>', file=outputFile)
+    outputFile.close()
+
+def errorWindow(page: ft.Page):
+    global error
+    page.title = "Error"
+    page.window_width = 400
+    page.window_height = 500
+    page.autoscroll = True
+    appBar = ft.AppBar(title=ft.Text("Error"),bgcolor=ft.colors.RED)
+    error_field = ft.Text(error)
+    line = ft.Divider(height=2, color="black")
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    page.add(
+        appBar,
+        error_field,
+        line,
+        finish_button)
+
+def icon_clicked(e):
+    global help
+    p = subPage(
+        controls=[
+            ft.Markdown(
+                help['top'],
+                selectable=True,
+                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            )
+        ],
+        page_props={"window_width":800},
+    )
+    p.start()
+
+def fileWindow(page: ft.Page):
+    def pick_input_file_result(e: ft.FilePickerResultEvent):
+        global config_file_name
+        if e.files:
+            selected_input_file.value = e.files[0].path
+        else:
+            selected_input_file.value = "Canceled."
+        config_file_name = selected_input_file.value
+        selected_input_file.update()
+
+    def pick_output_file_result(e: ft.FilePickerResultEvent):
+        global output_file_name
+        selected_output_file.value = e.path
+        output_file_name = selected_output_file.value
+        selected_output_file.update()
+
+    def exec_button_clicked(e):
+        global error, parts
+        if (config_file_name=="") or (config_file_name=="Canceled."):
+            warning_message.value = "Please select input file."
+            warning_message.update()
+            return
+        if output_file_name=="":
+            warning_message.value = "Please select output file."
+            warning_message.update()
+            return
+        [error, config, outputFile] = open_config_and_output_file(config_file_name, output_file_name)
+        if '' != error:
+            ft.app(target=errorWindow)
+        outputHTML(config, parts, outputFile)
+        page.window_destroy()
+
+    appBar = ft.AppBar(
+            title=ft.Text("Generate viewer HTML page"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+    subTitle1 = ft.Text("Configuration file selection.", style=ft.TextThemeStyle.TITLE_MEDIUM)
+    pick_input_file_dialog = ft.FilePicker(on_result=pick_input_file_result)
+    config_file_button = ft.ElevatedButton(
+            "configuration file",
+            icon=ft.icons.UPLOAD_FILE,
+            on_click=lambda _: pick_input_file_dialog.pick_files(
+                allow_multiple=False,
+            ),
+        )
+    selected_input_file = ft.Text()
+    line = ft.Divider(height=2, color="black")
+    subTitle2 = ft.Text("output file selection.", style=ft.TextThemeStyle.TITLE_MEDIUM)
+    pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
+    output_file_button = ft.ElevatedButton(
+            "output file",
+            icon=ft.icons.DOWNLOAD,
+            on_click=lambda _: pick_output_file_dialog.save_file(
+            ),
+        )
+    selected_output_file = ft.Text()
+
+    page.title = "Generate sensor data viewer"
+    page.window_width = 400
+    page.window_height = 500
+    
+    page.overlay.append(pick_input_file_dialog)
+    page.overlay.append(pick_output_file_dialog)
+
+    exec_button = ft.ElevatedButton(text="Generate viewer HTML page", on_click=exec_button_clicked)
+    warning_message = ft.Text()
+    row = ft.Row(
+            [
+                exec_button,
+                warning_message,
+            ]
+        )
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+
+    page.add(
+        appBar,
+        subTitle1,
+        config_file_button,
+        selected_input_file,
+        line,
+        subTitle2,
+        output_file_button,
+        selected_output_file,
+        line,
+        row,
+        finish_button
+    )
+
+if __name__ == "__main__":
+    global error, help, parts
+    [error, help, parts] = load_init_file(help_file_name, parts_file_name)
+    if "" == error:
+        ft.app(target=fileWindow)
+    else:
+        ft.app(target=errorWindow)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+

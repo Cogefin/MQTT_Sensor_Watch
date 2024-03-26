@@ -1,0 +1,246 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[ ]:
+
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import sqlite3
+import csv
+from flet_multi_page import subPage
+import flet as ft
+import yaml
+
+help_file="Help/sqlite_to_csv.yaml"
+db_table_name = 'sensorData'
+
+helpPageName = 'top'
+
+input_file_name = ''
+output_file_name = ''
+
+def open_db(file_name):
+    try:
+        conn = sqlite3.connect(file_name)
+        cur = conn.cursor()
+        table_list_query = "SELECT name FROM sqlite_master WHERE type='table';"
+        cur.execute(table_list_query)
+        tables = cur.fetchall()
+    except sqlite3.Error as error:
+        return False
+    finally:
+        for table in tables:
+            if table[0] == db_table_name:
+                return (True, cur , conn)
+    return (False, cur , conn)
+
+def printout_sensor_data_header(outputFile):
+    outputString = "topic , id , type , date , "
+    outputString = outputString + "accel_x , unit , accel_y , unit , accel_z , unit , "
+    outputString = outputString + "gyro_x , unit , gyro_y , unit , gyro_z , unit , "
+    outputString = outputString + "light , unit , "
+    outputString = outputString + "pressure , unit , "
+    outputString = outputString + "accel , unit , "
+    outputString = outputString + "humidity , unit , "
+    outputString = outputString + "temperature , unit , "
+    outputString = outputString + "current , unit , "
+    outputString = outputString + "color_r , unit , color_g , unit , color_b , unit , color_rgba , unit , "
+    outputString = outputString + "simple_digital , unit , "
+    outputString = outputString + "angle , unit , "
+    outputString = outputString + "gyro , unit , "
+    outputString = outputString + "distance , unit , "
+    outputString = outputString + "dust , unit , "
+    outputString = outputString + "latitude , unit , longitude , unit , altitude , unit , dop , unit , "
+    outputString = outputString + "speed_knot , unit , "
+    outputString = outputString + "simple_analog , unit , "
+    outputString = outputString + "year , unit , month , unit , day , unit , dayOfWeek , unit , hour , unit , minute , unit , second , unit , miriSecond , unit"
+    outputString = outputString + "\n"
+    try:
+        outputFile.write(outputString)
+    except:
+        print('write error')
+        return False
+    return True
+
+def open_csv(filename):
+    try:
+        outputFile = open(output_file_name, mode='w')
+        if not printout_sensor_data_header(outputFile):
+            return (False, '')
+    except Exception as e:
+        print("Exception occurred while loading CSV file...")
+        return (False, '')
+    return (True, outputFile)
+
+def convData(outputfile, conn, cur):
+    sql = "select * from " + db_table_name
+    for data in cur.execute(sql):
+        outputString = ''
+        for i in range(len(data)-1):
+            outputString += str(data[i+1])
+            if i != len(data)-2:
+                outputString +=', '
+        outputString = outputString + "\n"
+        try:
+            outputfile.write(outputString)
+        except:
+            print('write error')
+            return False
+    return True
+
+
+
+def loadHelp(helpFile):
+    global help
+    try:
+        with open(helpFile, mode='r', encoding='utf-8') as f:
+            help = yaml.safe_load(f)
+    except Exception as e:
+        return "Exception occurred while loading custom platform definition YAML file..."
+    return ""
+
+
+
+def errorWindow(page: ft.Page):
+    global error
+    page.title = "Error"
+    page.window_width = 400
+    page.window_height = 500
+    page.autoscroll = True
+    appBar = ft.AppBar(title=ft.Text("Error"),bgcolor=ft.colors.RED)
+    error_field = ft.Text(error)
+    line = ft.Divider(height=2, color="black")
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    page.add(
+        appBar,
+        error_field,
+        line,
+        finish_button)
+
+def icon_clicked(e):
+    global helpPageName
+    p = subPage(
+        controls=[
+            ft.Markdown(
+                help[helpPageName],
+                selectable=True,
+                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            )
+        ],
+        page_props={"window_width":800},
+    )
+    p.start()
+
+def fileWindow(page: ft.Page):
+    global input_file_name, output_file_name
+    def pick_input_file_result(e: ft.FilePickerResultEvent):
+        global input_file_name
+        if e.files:
+            selected_input_file.value = e.files[0].path
+        else:
+            selected_input_file.value = "Canceled."
+        input_file_name = selected_input_file.value
+        selected_input_file.update()
+
+    def pick_output_file_result(e: ft.FilePickerResultEvent):
+        global output_file_name
+        selected_output_file.value = e.path
+        output_file_name = selected_output_file.value
+        selected_output_file.update()
+
+    def exec_button_clicked(e):
+        global input_file_name, output_file_name
+        if (input_file_name=="") or (input_file_name=="Canceled."):
+            warning_message.value = "Please select input file."
+            warning_message.update()
+            return
+        if output_file_name=="":
+            warning_message.value = "Please select output file."
+            warning_message.update()
+            return
+        (dbFlag, cur , conn) = open_db(input_file_name)
+        (fileFlag, outputfile) = open_csv(output_file_name)
+        if dbFlag and fileFlag:
+            convData(outputfile, conn, cur)
+        if dbFlag:
+            cur.close()
+            conn.close()
+        if fileFlag:
+            outputfile.close()
+        page.window_destroy()
+
+    appBar = ft.AppBar(
+        title=ft.Text("センサデータデータベースからCSVへのエクスポート"),
+        bgcolor=ft.colors.BLUE,
+        actions=[
+            ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+        ]
+    )
+    subtitle1 = ft.Text("sqlite database file selection.", style=ft.TextThemeStyle.TITLE_MEDIUM)
+    pick_input_file_dialog = ft.FilePicker(on_result=pick_input_file_result)
+    input_file_button = ft.ElevatedButton(
+        "database file",
+        icon=ft.icons.UPLOAD_FILE,
+        on_click=lambda _: pick_input_file_dialog.pick_files(
+            allow_multiple=False,
+        ),
+    )
+    selected_input_file = ft.Text()
+    line = ft.Divider(height=2, color="black")
+    subtitle2 = ft.Text("output file selection.", style=ft.TextThemeStyle.TITLE_MEDIUM)
+    pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
+    output_file_button = ft.ElevatedButton(
+        "output file",
+        icon=ft.icons.DOWNLOAD,
+        on_click=lambda _: pick_output_file_dialog.save_file(
+        ),
+    )
+    selected_output_file = ft.Text()
+    page.title = "センサデータベースのCSV変換"
+    page.window_width = 400
+    page.window_height = 500
+    
+    page.overlay.append(pick_input_file_dialog)
+    page.overlay.append(pick_output_file_dialog)
+
+    exec_button = ft.ElevatedButton(text="Exec conversion", on_click=exec_button_clicked)
+    warning_message = ft.Text()
+    row = ft.Row(
+        [
+            exec_button,
+            warning_message,
+        ]
+    )
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+
+    page.add(
+        appBar,
+        subtitle1,
+        input_file_button,
+        selected_input_file,
+        line,
+        subtitle2,
+        output_file_button,
+        selected_output_file,
+        line,
+        row,
+        finish_button
+    )
+
+if __name__ == '__main__':
+    error = loadHelp(help_file)
+    if error != "":
+        ft.app(target=errorWindow)
+    else:
+        ft.app(target=fileWindow)
+
+
+
+
+# In[ ]:
+
+
+
+

@@ -1,0 +1,299 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[4]:
+
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import sqlite3
+import csv
+from flet_multi_page import subPage
+import flet as ft
+import yaml
+
+input_file_name = ''
+output_file_name = ''
+
+help_file="Help/csv_to_sqlite.yaml"
+
+helpPageName = 'top'
+
+db_table_name = 'sensorData'
+db_table_definition = '(id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT, sensor_id INTEGER, sensor_type INTEGER, epoch_time INTEGER, ' \
+    + 'accel_x REAL , accel_x_unit INTEGER, accel_y REAL , accel_y_unit INTEGER, accel_z REAL , accel_z_unit INTEGER, ' \
+    + 'gyro_x REAL , gyro_x_unit INTEGER, gyro_y REAL , gyro_y_unit INTEGER, gyro_z REAL , gyro_z_unit INTEGER, ' \
+    + 'light REAL , light_unit INTEGER , ' \
+    + 'pressure REAL, pressure_unit INTEGER, ' \
+    + 'accel REAL, accel_unit INTEGER, ' \
+    + 'humidity REAL, humidity_unit INTEGER, ' \
+    + 'temperature REAL, temperature_unit INTEGER, ' \
+    + 'current REAL, current_unit INTEGER, ' \
+    + 'color_r REAL , color_r_unit INTEGER, color_g REAL , color_g_unit INTEGER, color_b REAL , color_b_unit INTEGER, rgba INTEGER, rgba_unit INTEGER, ' \
+    + 'simple_digital INTEGER, simple_digital_unit INTEGER, ' \
+    + 'angle REAL, angle_unit INTEGER, ' \
+    + 'gyro REAL, gyro_unit INTEGER, ' \
+    + 'distance REAL, distance_unit INTEGER, ' \
+    + 'dust REAL, dust_unit INTEGER, ' \
+    + 'latitude REAL, latitude_unit INTEGER, longtitude REAL, longtitude_unit INTEGER, altitude REAL, altitude_unit INTEGER, dop , dop_unit INTEGER, ' \
+    + 'speed_knot , speed_knot_unit INTEGER, ' \
+    + 'simple_analog , simple_analog_unit INTEGER, ' \
+    + 'year INTEGER, year_unit INTEGER, month INTEGER, month_unit INTEGER, day INTEGER, day_unit INTEGER, dayOfWeek INTEGER, dayOfWeek_unit INTEGER, ' \
+    + 'hour INTEGER, hour_unit , minute , minute_unit , second , second_unit , miriSecond , miriSecond_unit ' \
+    + ')'
+
+
+def open_db(output_file_name):
+    global cur,conn, outputFile_rst
+    db_flag=False
+    try:
+        conn = sqlite3.connect(output_file_name)
+        cur = conn.cursor()
+        table_list_query = "SELECT name FROM sqlite_master WHERE type='table';"
+        cur.execute(table_list_query)
+        tables = cur.fetchall()
+    except sqlite3.Error as error:
+        outputFile_rst = False
+        return (False, None, None)
+    finally:
+        outputFile_rst = True
+        for table in tables:
+            if table[0] == db_table_name:
+                db_flag=True
+        if not db_flag:
+            create_db_table(cur, conn, db_table_name)
+        return (True, cur, conn)
+
+def create_db_table(cur, conn, db_table_name):
+    sql_query = 'CREATE TABLE ' + db_table_name + db_table_definition
+    cur.execute(sql_query)
+    conn.commit()
+
+db_table_entries = '(topic, sensor_id , sensor_type , epoch_time , ' \
+    + 'accel_x  , accel_x_unit , accel_y  , accel_y_unit , accel_z  , accel_z_unit , ' \
+    + 'gyro_x  , gyro_x_unit , gyro_y  , gyro_y_unit , gyro_z  , gyro_z_unit , ' \
+    + 'light  , light_unit  , ' \
+    + 'pressure , pressure_unit , ' \
+    + 'accel , accel_unit , ' \
+    + 'humidity , humidity_unit , ' \
+    + 'temperature , temperature_unit , ' \
+    + 'current , current_unit , ' \
+    + 'color_r  , color_r_unit , color_g  , color_g_unit , color_b  , color_b_unit , rgba , rgba_unit , ' \
+    + 'simple_digital , simple_digital_unit , ' \
+    + 'angle , angle_unit , ' \
+    + 'gyro , gyro_unit , ' \
+    + 'distance , distance_unit , ' \
+    + 'dust , dust_unit , ' \
+    + 'latitude , latitude_unit , longtitude , longtitude_unit , altitude , altitude_unit , dop , dop_unit , ' \
+    + 'speed_knot, speed_knot_unit , ' \
+    + 'simple_analog , simple_analog_unit , ' \
+    + 'year , year_unit , month , month_unit , day , day_unit , dayOfWeek , dayOfWeek_unit , ' \
+    + 'hour , hour_unit , minute , minute_unit , second, second_unit , miriSecond , miriSecond_unit ' \
+    + ')'
+
+numOfEntries = 74
+
+def insert_data_to_db(cur, conn, data):
+    qmarks = ' values('
+    for i in range(numOfEntries):
+        qmarks = qmarks + '?'
+        if (numOfEntries-1) != i:
+            qmarks = qmarks + ', '
+    qmarks = qmarks + ');'
+    sql_query = 'INSERT INTO ' + db_table_name + db_table_entries + qmarks
+    dataTuple = tuple(data)
+    cur.execute(sql_query, dataTuple)
+    conn.commit()
+
+def check_int_entry(num):
+    entry=[1,2,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63,65,6,67,68,69,70,71,72,73]
+    for i in range(len(entry)):
+        if entry[i] == num:
+            return True
+        else:
+            return False
+
+def convert_csv(cur, conn, data):
+    lines = len(data)
+    for i in range(lines):
+        newData=[]
+        if (i != 0):
+            for j in range(len(data[i])):
+                tmp = data[i][j]
+                if j==0:
+                    result = ''.join(tmp.split())
+                    newData.append(result)
+                elif check_int_entry(j):
+                    newData.append(int(tmp))
+                else:
+                    newData.append(float(tmp))
+            insert_data_to_db(cur, conn, newData)
+
+def open_csv(cur, conn, filename):
+    try:
+        with open(filename) as f:
+            reader = csv.reader(f)
+            l = [row for row in reader]
+    except Exception as e:
+        return "Exception occurred while loading CSV file..."
+    convert_csv(cur, conn, l)
+    return ""
+
+def loadHelp(helpFile):
+    global help
+    try:
+        with open(helpFile, mode='r', encoding='utf-8') as f:
+            help = yaml.safe_load(f)
+    except Exception as e:
+        return "Exception occurred while loading custom platform definition YAML file..."
+    return ""
+
+def errorWindow(page: ft.Page):
+    global error
+    page.title = "Error"
+    page.window_width = 400
+    page.window_height = 500
+    page.autoscroll = True
+    appBar = ft.AppBar(title=ft.Text("Error"),bgcolor=ft.colors.RED)
+    error_field = ft.Text(error)
+    line = ft.Divider(height=2, color="black")
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    page.add(
+        appBar,
+        error_field,
+        line,
+        finish_button)
+
+def icon_clicked(e):
+    global helpPageName
+    p = subPage(
+        controls=[
+            ft.Markdown(
+                help[helpPageName],
+                selectable=True,
+                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            )
+        ],
+        page_props={"window_width":800},
+    )
+    p.start()
+
+def fileWindow(page: ft.Page):
+    global input_file_name, output_file_name
+    def pick_input_file_result(e: ft.FilePickerResultEvent):
+        global input_file_name
+        if e.files:
+            selected_input_file.value = e.files[0].path
+        else:
+            selected_input_file.value = "Canceled."
+        input_file_name = selected_input_file.value
+        selected_input_file.update()
+
+    def pick_output_file_result(e: ft.FilePickerResultEvent):
+        global output_file_name
+        selected_output_file.value = e.path
+        output_file_name = selected_output_file.value
+        selected_output_file.update()
+
+    def exec_button_clicked(e):
+        global input_file_name, output_file_name
+        if (input_file_name=="") or (input_file_name=="Canceled."):
+            warning_message.value = "Please select input file."
+            warning_message.update()
+            return
+        if output_file_name=="":
+            warning_message.value = "Please select output file."
+            warning_message.update()
+            return
+        (flag, cur, conn) = open_db(output_file_name)
+        if flag:
+            warning_message.value = open_csv(cur, conn, input_file_name)
+            page.update()
+            cur.close()
+            conn.close()
+        page.window_destroy()
+
+    appBar = ft.AppBar(
+        title=ft.Text("センサデータデータベースからCSVへのエクスポート"),
+        bgcolor=ft.colors.BLUE,
+        actions=[
+            ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+        ]
+    )
+    subtitle1 = ft.Text("sqlite database file selection.", style=ft.TextThemeStyle.TITLE_MEDIUM)
+    pick_input_file_dialog = ft.FilePicker(on_result=pick_input_file_result)
+    input_file_button = ft.ElevatedButton(
+        "CSV file",
+        icon=ft.icons.UPLOAD_FILE,
+        on_click=lambda _: pick_input_file_dialog.pick_files(
+            allow_multiple=False,
+        ),
+    )
+    selected_input_file = ft.Text()
+    line = ft.Divider(height=2, color="black")
+    subtitle2 = ft.Text("output file selection.", style=ft.TextThemeStyle.TITLE_MEDIUM)
+    pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
+    output_file_button = ft.ElevatedButton(
+        "Database file",
+        icon=ft.icons.DOWNLOAD,
+        on_click=lambda _: pick_output_file_dialog.save_file(
+        ),
+    )
+    selected_output_file = ft.Text()
+    page.title = "CSV形式センサデータのSQLiteデータベースへの変換"
+    page.window_width = 400
+    page.window_height = 500
+    
+    page.overlay.append(pick_input_file_dialog)
+    page.overlay.append(pick_output_file_dialog)
+
+    exec_button = ft.ElevatedButton(text="Exec conversion", on_click=exec_button_clicked)
+    warning_message = ft.Text()
+    row = ft.Row(
+        [
+            exec_button,
+            warning_message,
+        ]
+    )
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+
+    page.add(
+        appBar,
+        subtitle1,
+        input_file_button,
+        selected_input_file,
+        line,
+        subtitle2,
+        output_file_button,
+        selected_output_file,
+        line,
+        row,
+        finish_button
+    )
+
+if __name__ == '__main__':
+    error = loadHelp(help_file)
+    if error != "":
+        ft.app(target=errorWindow)
+    else:
+        ft.app(target=fileWindow)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+

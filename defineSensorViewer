@@ -1,0 +1,2516 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[7]:
+
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from flet_multi_page import subPage
+import flet as ft
+from enum import Enum
+import yaml
+import re
+
+help_file="Help/defineSensorViewer.yaml"
+
+def loadHelp(helpFile):
+    global help
+    try:
+        with open(helpFile, mode='r', encoding='utf-8') as f:
+            help = yaml.safe_load(f)
+    except Exception as e:
+        return "Exception occurred while loading custom platform definition YAML file..."
+    return ""
+
+
+
+def errorWindow(page: ft.Page):
+    global error
+    page.title = "Error"
+    page.window_width = 400
+    page.window_height = 500
+    page.autoscroll = True
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    page.add(
+        ft.AppBar(title=ft.Text("Error"),bgcolor=ft.colors.RED),
+        ft.Text(error),
+        ft.Divider(height=2, color="black"),
+        finish_button
+    )
+
+def icon_clicked(e):
+    global helpPageName
+    p = subPage(
+        controls=[
+            ft.Markdown(
+                help[helpPageName],
+                selectable=True,
+                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            )
+        ],
+        page_props={"window_width":800},
+    )
+    p.start()
+
+error = ''
+
+targetTopic = []
+targetSensorType = []
+targetSensorID = []
+
+sensorTypeElements = {
+    'ACCELEROMETER'         : 3 ,
+    'GYROSCOPE'             : 3 ,
+    'LIGHT'                 : 1 ,
+    'PRESSURE'              : 1 ,
+    'LINEAR_ACCELERATION'   : 1 ,
+    'RELATIVE_HUMIDITY'     : 1 ,
+    'AMBIENT_TEMPERATURE'   : 1 ,
+    'CURRENT'               : 1 ,
+    'COLOR'                 : 4 ,
+    'SIMPLE'                : 1 ,
+    'ANGLE'                 : 1 ,
+    'ONE_AXIS_GYRO'         : 1 ,
+    'DISTANCE'              : 1 ,
+    'DUST'                  : 1 ,
+    'POSITION'              : 4 ,
+    'SPEED_KNOT'            : 1 ,
+    'SIMPLE_ANALOG'         : 1
+}
+
+sensorTypeSubElements = {
+    'ACCELEROMETER' : ['x軸', 'y軸', 'z軸'],
+    'GYROSCOPE'     : ['x軸', 'y軸', 'z軸'],
+    'COLOR'         : ['Red', 'Green', 'Blue', 'RGBA'],
+    'POSITION'      : ['緯度', '経度', '高度', 'dop値']
+}
+
+sensorTypeNumber = {
+    'ACCELEROMETER'         : 1 ,
+    'GYROSCOPE'             : 4 ,
+    'LIGHT'                 : 5 ,
+    'PRESSURE'              : 6 ,
+    'LINEAR_ACCELERATION'   : 9 ,
+    'RELATIVE_HUMIDITY'     : 11 ,
+    'AMBIENT_TEMPERATURE'   : 12 ,
+    'CURRENT'               : 14 ,
+    'COLOR'                 : 15 ,
+    'SIMPLE'                : 16 ,
+    'ANGLE'                 : 17 ,
+    'ONE_AXIS_GYRO'         : 18 ,
+    'DISTANCE'              : 19 ,
+    'DUST'                  : 21 ,
+    'POSITION'              : 23 ,
+    'SPEED_KNOT'            : 25 ,
+    'SIMPLE_ANALOG'         : 26
+}
+
+sensorTypeText = {
+    'ACCELEROMETER'         : '3軸加速度' ,
+    'GYROSCOPE'             : '3軸ジャイロ' ,
+    'LIGHT'                 : '光センサ' ,
+    'PRESSURE'              : '気圧センサ' ,
+    'LINEAR_ACCELERATION'   : '1軸リニア加速度' ,
+    'RELATIVE_HUMIDITY'     : '湿度' ,
+    'AMBIENT_TEMPERATURE'   : '気温' ,
+    'CURRENT'               : '電流' ,
+    'COLOR'                 : '色彩' ,
+    'SIMPLE'                : '単純デジタルセンサ' ,
+    'ANGLE'                 : '角度' ,
+    'ONE_AXIS_GYRO'         : '1軸ジャイロ' ,
+    'DISTANCE'              : '距離' ,
+    'DUST'                  : 'ホコリセンサ' ,
+    'POSITION'              : '位置センサ' ,
+    'SPEED_KNOT'            : '速度(ノット)' ,
+    'SIMPLE_ANALOG'         : '単純アナログセンサ'
+}
+
+sensorTypeName = [
+    'ACCELEROMETER',
+    'GYROSCOPE',
+    'LIGHT',
+    'PRESSURE',
+    'LINEAR_ACCELERATION',
+    'RELATIVE_HUMIDITY',
+    'AMBIENT_TEMPERATURE',
+    'CURRENT',
+    'COLOR',
+    'SIMPLE',
+    'ANGLE',
+    'ONE_AXIS_GYRO',
+    'DISTANCE',
+    'DUST',
+    'POSITION',
+    'SPEED_KNOT',
+    'SIMPLE_ANALOG'
+]
+
+dataSource=[]
+
+preProcessData=[]
+preProcessMethod=[]
+preProcessOption=[]
+
+preProcessDataName = []
+
+statisticsData=[]
+statisticsLabel=[]
+statisticsUnits=[]
+statisticsTitle=[]
+statistics_h_Title=[]
+statistics_v_Title=[]
+
+numOfTimeSeriesGraph=0
+numOfCorrelationAnalysis = 0
+numOfRule = 0
+
+timeSeriesGraphData=[]
+timeSeriesGraphLabel=[]
+timeSeriesGraphTitle=[]
+timeSeriesGraph_h_Title=[]
+timeSeriesGraph_v_Title=[]
+timeSeriesGraphButtonState=-1
+
+dataRule=[]
+dataRuleMessage=[]
+
+correlationAnalysisPair=[]
+correlationAnalysisPairLabel=[]
+correlationAnalysisGraphTitle=[]
+
+numOfLibraries = 0
+libraryType = []
+librarySrc = []
+libraryIntegrity = []
+libraryCrossorigin = []
+libraryReferrerpolicy = []
+
+
+def dumpDefinitions():
+    print("--------全体定義-------------")
+    print('timeRange : ')
+    print(timeRange)
+    print('decimalPoint : ')
+    print(decimalPoint)
+    print('reDrawInterval : ')
+    print(reDrawInterval)
+    print('dataFileName : ')
+    print(dataFileName)
+    print('dataFileType : ')
+    print(dataFileType)
+    print('pageTitle : ')
+    print(pageTitle)
+    print("--------データ種別選択-------------")
+    print('targetTopic : ')
+    print(targetTopic)
+    print('targetSensorType : ')
+    print(targetSensorType)
+    print('targetSensorID : ')
+    print(targetSensorID)
+    print('dataSource : ')
+    print(dataSource)
+    print("--------前処理データ系列定義-------------")
+    print('preProcessData : ')
+    print(preProcessData)
+    print('preProcessMethod : ')
+    print(preProcessMethod)
+    print('preProcessOption : ')
+    print(preProcessOption)
+    print('preProcessDataName : ')
+    print(preProcessDataName)
+    print("--------統計算出対象定義-------------")
+    print('statisticsData : ')
+    print(statisticsData)
+    print('statisticsLabel : ')
+    print(statisticsLabel)
+    print('statisticsUnits : ')
+    print(statisticsUnits)
+    print('statisticsTitle : ')
+    print(statisticsTitle)
+    print('statistics_h_Title : ')
+    print(statistics_h_Title)
+    print('statistics_v_Title : ')
+    print(statistics_v_Title)
+    print("--------時系列グラフ定義-------------")
+    print('numOfTimeSeriesGraph : ')
+    print(numOfTimeSeriesGraph)
+    print('timeSeriesGraphData : ')
+    print(timeSeriesGraphData)
+    print('timeSeriesGraphLabel : ')
+    print(timeSeriesGraphLabel)
+    print('timeSeriesGraphTitle : ')
+    print(timeSeriesGraphTitle)
+    print('timeSeriesGraph_h_Title : ')
+    print(timeSeriesGraph_h_Title)
+    print('timeSeriesGraph_v_Title : ')
+    print(timeSeriesGraph_v_Title)
+    print('timeSeriesGraphButtonState : ')
+    print(timeSeriesGraphButtonState)
+    print("----------相関分析定義---------------------")
+    print('numOfCorrelationAnalysis : ')
+    print(numOfCorrelationAnalysis)
+    print('correlationAnalysisPair : ')
+    print(correlationAnalysisPair)
+    print('correlationAnalysisPairLabel : ')
+    print(correlationAnalysisPairLabel)
+    print('correlationAnalysisGraphTitle : ')
+    print(correlationAnalysisGraphTitle)
+    print("----------データ検査ルール定義---------------------")
+    print('numOfRule : ')
+    print(numOfRule)
+    print('dataRule : ')
+    print(dataRule)
+    print('dataRuleMessage : ')
+    print(dataRuleMessage)
+    print("----------ライブラリ定義---------------------")
+    print('numOfLibraries : ')
+    print(numOfLibraries)
+    print('libraryType : ')
+    print(libraryType)
+    print('librarySrc : ')
+    print(librarySrc)
+    print('libraryIntegrity : ')
+    print(libraryIntegrity)
+    print('libraryCrossorigin : ')
+    print(libraryCrossorigin)
+    print('libraryReferrerpolicy : ')
+    print(libraryReferrerpolicy)
+    print("-----------------------------------------------")
+
+def outputConfig(output_file_name):
+    #dumpDefinitions()
+    try:
+        outputFile = open(output_file_name, 'w', encoding='UTF-8')
+    except Exception as e:
+        error = 'Exception occurred while open output file...'
+        return error
+    # 全体に共通したパラメータ
+    print('#', file=outputFile)
+    print('# 全般のパラメータ定義', file=outputFile)
+    print('#', file=outputFile)
+    time_range    = 'timeRange : ' + timeRange.value
+    decimal_point = 'numOfDigits : ' + decimalPoint.value
+    interval = 'interval : ' + reDrawInterval.value
+    page_title = 'pageTitle : \'' + pageTitle.value + '\''
+    if 'CSV' == str(dataFileType.value):
+        data_file_type = 'fileType : 0'
+    else:
+        data_file_type = 'fileType : 1'
+    data_file_name = 'dataFileName : \"' + dataFileName.value + '\"'
+    print(time_range, file=outputFile)
+    print(decimal_point, file=outputFile)
+    print(interval, file=outputFile)
+    print(page_title, file=outputFile)
+    print(data_file_type, file=outputFile)
+    print(data_file_name, file=outputFile)
+    # 監視対象のセンサの定義
+    print('#', file=outputFile)
+    print('# 監視対象のセンサの定義', file=outputFile)
+    print('#', file=outputFile)
+    print('target:', file=outputFile)
+    print('  [', file=outputFile)
+    for i in range(len(targetTopic)):
+        topic = '      topic : \'' + targetTopic[i].value + '\','
+        type  = '      type  : '+ str(sensorTypeNumber[targetSensorType[i].value]) + ','
+        id    = '      id    : '+ targetSensorID[i].value
+        print('    {', file=outputFile)
+        print(topic, file=outputFile)
+        print(type, file=outputFile)
+        print(id, file=outputFile)
+        if i == len(targetTopic) -1 :
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('  ]', file=outputFile)
+    print('', file=outputFile)
+    # 前処理
+    print('#', file=outputFile)
+    print('# 前処理のパラメータ', file=outputFile)
+    print('#', file=outputFile)
+    print('preProcessOptions:', file=outputFile)
+    print('  [', file=outputFile)
+    for i in range(len(preProcessData)):
+        dataSource = '      dataSource : ' + preProcessData[i].value + ','
+        preprocess = '      preprocess : ' + preProcessMethod[i].value + ','
+        if '' == str(preProcessOption[i].value):
+            option = '        n : 0'
+        else:
+            option = '        n : ' + preProcessOption[i].value
+        print('    {', file=outputFile)
+        print(dataSource, file=outputFile)
+        print(preprocess, file=outputFile)
+        print('      option     : {', file=outputFile)
+        print(option, file=outputFile)
+        print('      }', file=outputFile)
+        if i == len(preProcessData) -1 :
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('  ]', file=outputFile)
+    print('', file=outputFile)
+    # 統計データ抽出
+    print('#', file=outputFile)
+    print('# 統計データ抽出用の変数', file=outputFile)
+    print('#', file=outputFile)
+    print('statisticsOptions:', file=outputFile)
+    print('  [', file=outputFile)
+    for i in range(len(statisticsData)):
+        dataSource       = '      dataSource      : ' + statisticsData[i].value + ','
+        label            = '      label           : ' + statisticsLabel[i].value + ','
+        statistics_units = '      statisticsUnits : ' + statisticsUnits[i].value + ','
+        print('    {', file=outputFile)
+        print(dataSource, file=outputFile)
+        print(label, file=outputFile)
+        print(statistics_units, file=outputFile)
+        if i == len(statisticsData) -1 :
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('  ]', file=outputFile)
+    print('', file=outputFile)
+    # 度数分布グラフ
+    print('#', file=outputFile)
+    print('# 度数分布を作成するためのパラメータ', file=outputFile)
+    print('#', file=outputFile)
+    print('fdChart_options:', file=outputFile)
+    print('  [', file=outputFile)
+    for i in range(len(statisticsTitle)):
+        title  = '      title : \'' + statisticsTitle[i].value + '\','
+        legend = '      legend: { position: \'none\' },'
+        hAxis  = '        title : \'' + statistics_h_Title[i].value + '\''
+        vAxis  = '        title : \'' + statistics_v_Title[i].value + '\''
+        print('    {', file=outputFile)
+        print(title, file=outputFile)
+        print(legend, file=outputFile)
+        print('      hAxis: {', file=outputFile)
+        print(hAxis, file=outputFile)
+        print('      },', file=outputFile)
+        print('      vAxis: {', file=outputFile)
+        print(vAxis, file=outputFile)
+        print('      }', file=outputFile)
+        if i == len(statisticsTitle) -1 :
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('  ]', file=outputFile)
+    print('', file=outputFile)
+    # 時系列グラフ用データ系列選択
+    print('#', file=outputFile)
+    print('# 時系列グラフを作成するためのパラメータ', file=outputFile)
+    print('#', file=outputFile)
+    print('lineChart_map:', file=outputFile)
+    print('  [', file=outputFile)
+    for i in range(numOfTimeSeriesGraph):
+        label = '      label : ['
+        for j in range(len(timeSeriesGraphLabel[i])):
+            label = label + '\'' + timeSeriesGraphLabel[i][j].value +  '\''
+            if j != len(timeSeriesGraphLabel[i]) -1:
+                label = label + ','
+        label = label + '],'
+        data_source = '      dataSource : ['
+        for j in range(len(timeSeriesGraphData[i])):
+            data_source = data_source + timeSeriesGraphData[i][j].value
+            if j != len(timeSeriesGraphData[i]) -1:
+                data_source = data_source + ','
+        data_source = data_source + ']'
+        print('    {', file=outputFile)
+        print(label, file=outputFile)
+        print(data_source, file=outputFile)
+        if i == numOfTimeSeriesGraph-1:
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('  ]', file=outputFile)
+    print('', file=outputFile)
+    # 時系列グラフ用パラメータ
+    print('#', file=outputFile)
+    print('# 時系列グラフ自身のパラメータ', file=outputFile)
+    print('#', file=outputFile)
+    print('lineChart_options:', file=outputFile)
+    print('  [', file=outputFile)
+    for i in range(numOfTimeSeriesGraph):
+        title       = '      title: \'' + timeSeriesGraphTitle[i].value + '\','
+        legend      = '      legend: { position: \'bottom\' },'
+        interpolate = '      interpolateNulls: true,'
+        hAxis_hdr   = '      hAxis: {'
+        hAxis       = '        title : \'' + timeSeriesGraph_h_Title[i].value + '\''
+        hAxis_tail  = '      },'
+        vAxis_hdr   = '      vAxis: {'
+        vAxis       = '        title : \'' + timeSeriesGraph_v_Title[i].value + '\''
+        vAxis_tail  = '      }'
+        print('    {', file=outputFile)
+        print(title, file=outputFile)
+        print(legend, file=outputFile)
+        print(interpolate, file=outputFile)
+        print(hAxis_hdr, file=outputFile)
+        print(hAxis, file=outputFile)
+        print(hAxis_tail, file=outputFile)
+        print(vAxis_hdr, file=outputFile)
+        print(vAxis, file=outputFile)
+        print(vAxis_tail, file=outputFile)
+        if i == numOfTimeSeriesGraph-1:
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('  ]', file=outputFile)
+    print('', file=outputFile)
+    # 相関分析のデータ組み合わせ定義
+    print('#', file=outputFile)
+    print('# 相関分析データ系列組み合わせ', file=outputFile)
+    print('#', file=outputFile)
+    print('correlation_map:', file=outputFile)
+    print('  [', file=outputFile)
+    for i in range(numOfCorrelationAnalysis):
+        #label = '      label : ['
+        (label_h, label_v) = correlationAnalysisPairLabel[i]
+        (source_h, source_v) = correlationAnalysisPair[i]
+        label = '      label : [\'' + str(label_h.value) + '\', \'' + str(label_v.value) + '\'],'
+        data_source = '      dataSource : [' + str(source_h.value) + ', ' + str(source_v.value) + ']'
+        print('    {', file=outputFile)
+        print(label, file=outputFile)
+        print(data_source, file=outputFile)
+        if i == numOfCorrelationAnalysis-1:
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('  ]', file=outputFile)
+    print('', file=outputFile)
+    # 散布図のパラメータ定義
+    print('#', file=outputFile)
+    print('# 散布図パラメータ', file=outputFile)
+    print('#', file=outputFile)
+    print('correlation_options:', file=outputFile)
+    print('  [', file=outputFile)
+    for i in range(len(correlationAnalysisGraphTitle)):
+        (t , h, v) = correlationAnalysisGraphTitle[i]
+        title       = '      title: \'' + t.value + '\','
+        legend      = '      legend: { position: \'none\' },'
+        hAxis_hdr   = '      hAxis: {'
+        hAxis       = '        title : \'' + h.value + '\''
+        hAxis_tail  = '      },'
+        vAxis_hdr   = '      vAxis: {'
+        vAxis       = '        title : \'' + v.value + '\''
+        vAxis_tail  = '      }'
+        print('    {', file=outputFile)
+        print(title, file=outputFile)
+        print(legend, file=outputFile)
+        print(hAxis_hdr, file=outputFile)
+        print(hAxis, file=outputFile)
+        print(hAxis_tail, file=outputFile)
+        print(vAxis_hdr, file=outputFile)
+        print(vAxis, file=outputFile)
+        print(vAxis_tail, file=outputFile)
+        if i == len(correlationAnalysisGraphTitle)-1:
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('  ]', file=outputFile)
+    print('', file=outputFile)
+    # データ監視ルール宣言
+    print('#', file=outputFile)
+    print('# データ監視ルール宣言', file=outputFile)
+    print('#', file=outputFile)
+    print('checkFunks:', file=outputFile)
+    print('  [', file=outputFile)
+    for i in range(numOfRule):
+        func_name = '    \'func' + str(i) + '\''
+        if i != numOfRule-1:
+            func_name = func_name + ','
+        print(func_name, file=outputFile)
+    print('  ]', file=outputFile)
+    print('', file=outputFile)
+    # データ監視ルール定義
+    print('#', file=outputFile)
+    print('# データ監視ルール定義', file=outputFile)
+    print('#', file=outputFile)
+    for i in range(len(dataRule)):
+        func_name = 'func' + str(i) + ' : |'
+        func_str = dataRule[i].value
+        func_body = func_str.splitlines()
+        print(func_name, file=outputFile)
+        for j in range(len(func_body)):
+            if '' != func_body[j]:
+                print('  ' + func_body[j], file=outputFile)
+        #print(func_body, file=outputFile)
+        print('', file=outputFile)
+    # データ監視ルール警告メッセージ
+    print('#', file=outputFile)
+    print('# データ監視ルール警告メッセージ', file=outputFile)
+    print('#', file=outputFile)
+    print('alertMessages:', file=outputFile)
+    print('  [', file=outputFile)
+    for i in range(len(dataRuleMessage)):
+        msg = '    \'' + dataRuleMessage[i].value + '\''
+        if i != len(dataRuleMessage)-1:
+            msg = msg + ','
+        print(msg, file=outputFile)
+    print('  ]', file=outputFile)
+    print('', file=outputFile)
+    # ライブラリ
+    print('#', file=outputFile)
+    print('# ライブラリ', file=outputFile)
+    print('#', file=outputFile)
+    print('libraries:', file=outputFile)
+    print('  [', file=outputFile)
+    for i in range(numOfLibraries):
+        type           = '        type: \'' + libraryType[i].value + '\','
+        src            = '        src: \'' + librarySrc[i].value + '\','
+        integrity      = '        integrity: \'' + libraryIntegrity[i].value + '\','
+        crossorigin    = '        crossorigin: \'' + libraryCrossorigin[i].value + '\','
+        referrerpolicy = '        referrerpolicy: \'' + libraryReferrerpolicy[i].value + '\','
+        print('    {', file=outputFile)
+        print(type, file=outputFile)
+        print(src, file=outputFile)
+        print(integrity, file=outputFile)
+        print(crossorigin, file=outputFile)
+        print(referrerpolicy, file=outputFile)
+        if i == len(dataRuleMessage)-1:
+            print('    }', file=outputFile)
+        else:
+            print('    },', file=outputFile)
+    print('  ]', file=outputFile)
+    print('', file=outputFile)
+    return ''
+
+def expandPreProcessData():
+    global dataSource, preProcessData, preProcessOption, preProcessMethod,  preProcessDataName
+    for i in range(len(preProcessData)):
+        tmp=''
+        if int(preProcessMethod[i].value)==0:
+            tmp = dataSource[int(preProcessData[i].value)]
+        elif int(preProcessMethod[i].value)==1:
+            tmp = dataSource[int(preProcessData[i].value)] + ' (差分値) '
+        elif int(preProcessMethod[i].value)==2:
+            tmp = dataSource[int(preProcessData[i].value)] + ' (傾き) '
+        elif int(preProcessMethod[i].value)==3:
+            tmp = dataSource[int(preProcessData[i].value)] + ' (単純移動平均 : 区間 ' + str(int(preProcessOption[i].value)) + ' )'
+        elif int(preProcessMethod[i].value)==4:
+            tmp = dataSource[int(preProcessData[i].value)] + ' (線形加重移動平均 : 区間 ' + str(int(preProcessOption[i].value)) + ' )'
+        preProcessDataName.append(tmp)
+
+def expandSensorTarget():
+    for i in range(len(targetSensorType)):
+        if 1 == sensorTypeElements[targetSensorType[i].value]:
+            tmp = sensorTypeText[targetSensorType[i].value]
+            dataSource.append(tmp)
+        else:
+            for j in range(sensorTypeElements[targetSensorType[i].value]):
+                tmp = sensorTypeText[targetSensorType[i].value] + ' ' + sensorTypeSubElements[targetSensorType[i].value][j]
+                dataSource.append(tmp)
+
+def checkTimeSeriesGraphFields():
+    for i in range(len(timeSeriesGraphData)):
+        for j in range(len(timeSeriesGraphData[i])):
+            last = len(preProcessData)-1
+            if (0 > int(timeSeriesGraphData[i][j].value)) or (last < int(timeSeriesGraphData[i][j].value)):
+                return (True, str(i+1)+'番目のグラフに描画するデータ系列を選択してください．')
+    for i in range(len(timeSeriesGraphLabel)):
+        for j in range(len(timeSeriesGraphLabel[i])):
+            if ''==timeSeriesGraphLabel[i][j].value:
+                return (True, str(i+1)+'番目のグラフに描画するデータ系列の名称を入力してください．')
+    for i in range(len(timeSeriesGraphTitle)):
+        if ''==timeSeriesGraphTitle[i].value:
+            return (True, str(i+1)+'番目のグラフのタイトルを入力してください．')
+    for i in range(len(timeSeriesGraph_h_Title)):
+        if ''==timeSeriesGraph_h_Title[i].value:
+            return (True, str(i+1)+'番目のグラフの横軸の名称を入力してください．')
+    for i in range(len(timeSeriesGraph_v_Title)):
+        if ''==timeSeriesGraph_v_Title[i].value:
+            return (True, str(i+1)+'番目のグラフの縦軸の名称を入力してください．')
+    return (False, '')
+
+def checkStatisticsFields():
+    global preProcessDataName, statisticsData, statisticsLabel, statisticsUnits, statisticsTitle, statistics_h_Title, statistics_v_Title
+    flag = False
+    val = ''
+    for i in range(len(statisticsData)):
+        if None==statisticsData[i].value:
+            val = '対象データ'+str(i+1)+' : 統計データを計算するデータを選択してください．'
+            flag=True
+    for i in range(len(statisticsLabel)):
+        if ''==statisticsLabel[i].value:
+            val = '対象データ'+str(i+1)+' : 選択したデータ系列に名前をつけてください．'
+            flag=True
+    for i in range(len(statisticsTitle)):
+        if ''==statisticsTitle[i].value:
+            val = '対象データ'+str(i+1)+' : 選択したデータ系列の度数分布グラフに名前をつけてください．'
+            flag=True
+    for i in range(len(statistics_h_Title)):
+        if ''==statistics_h_Title[i].value:
+            val = '対象データ'+str(i+1)+' : 選択したデータ系列の度数分布グラフの横軸見出しをつけてください．'
+            flag=True
+    for i in range(len(statistics_v_Title)):
+        if ''==statistics_v_Title[i].value:
+            val = '対象データ'+str(i+1)+' : 選択したデータ系列の度数分布グラフの縦軸見出しをつけてください．'
+            flag=True
+    for i in range(len(statisticsUnits)):
+        pattern = '^[0-9]+$'
+        if None==re.match(pattern,statisticsUnits[i].value):
+            val = '対象データ'+str(i+1)+' : 選択したデータ系列の度数分布グラフにおける横軸の分割数を入力してください．'
+            flag=True
+    return (flag, val)
+
+def checkTargetFields():
+    global targetTopic, targetSensorID, targetSensorType
+    flag = False
+    val = ''
+    for i in  range(len(targetSensorID)):
+        pattern = '^[-]?[0-9]+$'
+        if None==re.match(pattern,targetSensorID[i].value):
+            val = '監視対象'+str(i+1)+'のセンサIDに数字を入力してください．'
+            flag=True
+    for i in  range(len(targetSensorType)):
+        if None==targetSensorType[i].value:
+            val = '監視対象'+str(i+1)+'のセンサタイプを選択してください．'
+            flag=True
+    for i in  range(len(targetTopic)):
+        if ''==targetTopic[i].value:
+            val = '監視対象'+str(i+1)+'のトピックを入力してください．'
+            flag=True
+    return (flag, val)
+
+def checkPreProcessFields():
+    global preProcessData, preProcessMethod, preProcessOption
+    flag = False
+    val = ''
+    for i in  range(len(preProcessMethod)):
+        if None==preProcessMethod[i].value:
+            val = '抽出系列'+str(i+1)+'に対する前処理の内容を選択してください．'
+            flag=True
+    for i in  range(len(preProcessData)):
+        if None==preProcessData[i].value:
+            val = '抽出系列'+str(i+1)+'の元になるデータ系列を選択してください．'
+            flag=True
+    if flag:
+        return (flag, val)
+    for i in  range(len(preProcessOption)):
+        #print(preProcessMethod[i].value)
+        if (int(preProcessMethod[i].value)== 3) or (int(preProcessMethod[i].value)== 4):
+            pattern = '^[0-9]+$'
+            if None==re.match(pattern,preProcessOption[i].value):
+                val = '抽出系列'+str(i+1)+'に対する移動平均のレンジ数(整数)を入力してください．'
+                flag=True
+    return (flag, val)
+
+def checkGeneralFields():
+    global timeRange, decimalPoint, reDrawInterval, dataFileName, dataFileType
+    pattern = '^[0-9]+$'
+    if None==re.match(pattern,timeRange.value):
+        return (True, 'センサデータのうち，最終時刻から何秒前まで遡って，データを採用するか．秒数を入力してください．')
+    if None==re.match(pattern,decimalPoint.value):
+        return (True, '小数点以下何桁まで利用するかの数字を入力してください．')
+    if None==re.match(pattern,reDrawInterval.value):
+        return (True, '再実行(再描画)の時間間隔(秒)を入力してください．')
+    if None==dataFileType.value:
+        return (True, 'データファイルの種類を選択してください．')
+    if dataFileName.value == '':
+        return (True, 'データファイル名を入力してください．')
+    if pageTitle.value == '':
+        return (True, 'Webページタイトルを入力してください．')
+    return (False, '')
+
+
+def checkDataRules():
+    global dataRule, dataRuleMessage, numOfRule
+    for i in range(len(dataRuleMessage)):
+        if ''== dataRuleMessage[i].value:
+            return (True, 'Webページに出力する警告メッセージを入力してください．')
+    for i in range(len(dataRule)):
+        if ''== dataRule[i].value:
+            return (True, 'データを検査するルールを入力してください．')
+    return (False, '')
+
+def checkLibraryDefinition():
+    global numOfLibraries, libraryType, librarySrc, libraryIntegrity, libraryCrossorigin, libraryReferrerpolicy
+    for i in range(numOfLibraries):
+        if '' == librarySrc[i].value:
+            return str(i+1)+'番目のライブラリのsrcが入力されていません．'
+        else:
+            return ''
+
+def checkCorrelationAnalysisDatas():
+    for i in range(len(correlationAnalysisPair)):
+        (first, second) = correlationAnalysisPair[i]
+        if ((first.value == None) or (second.value == None)):
+            return (True, '前処理済みデータの系列を選択してください．')
+    for i in range(len(correlationAnalysisPairLabel)):
+        (first, second) = correlationAnalysisPairLabel[i]
+        if ((first.value == '') or (second.value == '')):
+            return (True, '前処理済みデータ系列に付ける名前(ラベル)を入力してください．')
+    for i in range(len(correlationAnalysisGraphTitle)):
+        (title, h_title, v_title) = correlationAnalysisGraphTitle[i]
+        if (title.value == ''):
+            return (True, '散布図のタイトルを入力してください．')
+        if (h_title.value == ''):
+            return (True, '散布図の横軸のタイトルを入力してください．')
+        if (v_title.value == ''):
+            return (True, '散布図の縦軸のタイトルを入力してください．')
+    return (False, '')
+
+def mainWindow(page: ft.Page):
+    def createView5():
+        global helpPageName, timeRange, decimalPoint, reDrawInterval, dataFileName, dataFileType, pageTitle
+        def next_button_clicked(e):
+            (flag, msg) = checkGeneralFields()
+            if flag:
+                errorField.value = msg
+                page.update()
+            else:
+                page.go("/view10")
+        appBar = ft.AppBar(
+                title=ft.Text("共通設定項目"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        errorField = ft.Text('')
+        
+        subTitle0 = ft.Text('ページタイトル', size=24)
+        description0 = ft.Text('生成するwebページのタイトルを定義してください．')
+        pageTitleBox = ft.TextField(label='ページタイトル',value='ページタイトル')
+        pageTitle = pageTitleBox
+        subTitle1 = ft.Text('時刻選択', size=24)
+        description1 = ft.Text('センサデータのうち，最終時刻から何秒前まで遡って，データを採用するか．すべてのデータを利用する場合は，「0」を入手してください．')
+        timeRangeBox = ft.TextField(label='遡る時間(秒単位)',value='0')
+        timeRange = timeRangeBox
+        subTitle2 = ft.Text('小数点以下の取り扱い', size=24)
+        description2 = ft.Text('統計処理など，各種の計算結果を表示する際に，小数点以下何桁まで表示するかを入力してください．')
+        decimalPointBox = ft.TextField(label='遡る時間(秒単位)',value='5')
+        decimalPoint = decimalPointBox
+        subTitle3 = ft.Text('再描画時間間隔', size=24)
+        description3 = ft.Text('出力するwebページは一定時間間隔で再描画(再実行)されるため，そのインターバル(秒単位)を入力してください．')
+        intervalBox = ft.TextField(label='時間(秒単位)',value='15')
+        reDrawInterval = intervalBox
+        subTitle4 = ft.Text('データファイル選択', size=24)
+        description4 = ft.Text('データファイルのファイル名を入力し，種類の選択してください．')
+        fileNameBox = ft.TextField(label='ファイル名',value='')
+        dataFileName = fileNameBox
+        radioButton = ft.RadioGroup(content=ft.Row([
+            ft.Radio(value="CSV", label="CSV"),
+            ft.Radio(value="SQLite", label="SQLite")]))
+        dataFileType = radioButton
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(subTitle0)
+        lv.controls.append(description0)
+        lv.controls.append(pageTitleBox)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
+        lv.controls.append(description1)
+        lv.controls.append(timeRangeBox)
+        lv.controls.append(line)
+        lv.controls.append(subTitle2)
+        lv.controls.append(description2)
+        lv.controls.append(decimalPointBox)
+        lv.controls.append(line)
+        lv.controls.append(subTitle3)
+        lv.controls.append(description3)
+        lv.controls.append(intervalBox)
+        lv.controls.append(subTitle4)
+        lv.controls.append(description4)
+        lv.controls.append(radioButton)
+        lv.controls.append(fileNameBox)
+        tmp = [appBar, nextButton, errorField, line, lv]
+        #tmp = [appBar, nextButton, errorField, line, subTitle0, description0, pageTitleBox, line, subTitle1, description1, timeRangeBox, line, subTitle2, description2, decimalPointBox, line, subTitle3, description3, intervalBox, subTitle4, description4, radioButton, fileNameBox]
+        helpPageName = 'general'
+        page.window_height = 1050
+        return ft.View("/view5", tmp)
+
+    def createView10():
+        global helpPageName, targetTopic, targetSensorID, targetSensorType
+        def next_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                expandSensorTarget()
+                page.go("/view20")
+        def add_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view11")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            targetTopic.pop(num-1)
+            targetSensorID.pop(num-1)
+            targetSensorType.pop(num-1)
+            page.go("/view12")
+        appBar = ft.AppBar(
+                title=ft.Text("監視対象センサ選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        targetBox = ft.TextField(label='MQTTトピック')
+        targetTopic.append(targetBox)
+        targetType = ft.Dropdown(
+            label="センサタイプ",
+            autofocus=True,
+        )
+        for i in range(len(sensorTypeName)):
+            targetType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        targetSensorType.append(targetType)
+        idBox = ft.TextField(label='センサID')
+        targetSensorID.append(idBox)
+        line = ft.Divider(height=2, color="black")
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(targetTopic):
+            tmp = [appBar , addButton, errorField , line]
+        else:
+            tmp = [appBar , addButton, row ,errorField, line]
+        for i in range(len(targetTopic)):
+            lv.controls.append(ft.Text('監視対象'+str(i+1)))
+            lv.controls.append(targetTopic[i])
+            lv.controls.append(targetSensorType[i])
+            lv.controls.append(targetSensorID[i])
+            lv.controls.append(line)
+        tmp.append(lv)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName = 'target'
+        return ft.View("/view10", tmp)
+
+    def createView11():
+        global helpPageName, targetTopic, targetSensorID, targetSensorType
+        def next_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                expandSensorTarget()
+                page.go("/view20")
+        def add_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view10")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '全ての項目に入力をしてください．'
+                page.update()
+            targetTopic.pop(num-1)
+            targetSensorID.pop(num-1)
+            targetSensorType.pop(num-1)
+            #print(targetTopic)
+            page.go("/view12")
+        appBar = ft.AppBar(
+                title=ft.Text("監視対象センサ選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        targetBox = ft.TextField(label='MQTTトピック')
+        targetTopic.append(targetBox)
+        targetType = ft.Dropdown(
+            label="センサタイプ",
+            autofocus=True,
+        )
+        for i in range(len(sensorTypeName)):
+            targetType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        targetSensorType.append(targetType)
+        idBox = ft.TextField(label='センサID')
+        targetSensorID.append(idBox)
+        line = ft.Divider(height=2, color="black")
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(targetTopic):
+            tmp = [appBar , addButton, errorField , line]
+        else:
+            tmp = [appBar , addButton, row ,errorField, line]
+        for i in range(len(targetTopic)):
+            lv.controls.append(ft.Text('監視対象'+str(i+1)))
+            lv.controls.append(targetTopic[i])
+            lv.controls.append(targetSensorType[i])
+            lv.controls.append(targetSensorID[i])
+            lv.controls.append(line)
+        tmp.append(lv)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName = 'target'
+        return ft.View("/view11", tmp)
+
+    def createView12():
+        global helpPageName, targetTopic, targetSensorID, targetSensorType
+        def next_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                expandSensorTarget()
+                page.go("/view20")
+        def add_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view10")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            targetTopic.pop(num-1)
+            targetSensorID.pop(num-1)
+            targetSensorType.pop(num-1)
+            page.go("/view13")
+        appBar = ft.AppBar(
+                title=ft.Text("監視対象センサ選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        line = ft.Divider(height=2, color="black")
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(targetTopic):
+            tmp = [appBar , addButton, errorField , line]
+        else:
+            tmp = [appBar , addButton, row ,errorField, line]
+        for i in range(len(targetTopic)):
+            lv.controls.append(ft.Text('監視対象'+str(i+1)))
+            lv.controls.append(targetTopic[i])
+            lv.controls.append(targetSensorType[i])
+            lv.controls.append(targetSensorID[i])
+            lv.controls.append(line)
+        tmp.append(lv)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName = 'target'
+        return ft.View("/view12", tmp)
+
+    def createView13():
+        global helpPageName, targetTopic, targetSensorID, targetSensorType
+        def next_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                expandSensorTarget()
+                page.go("/view20")
+        def add_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view10")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            targetTopic.pop(num-1)
+            page.go("/view12")
+        appBar = ft.AppBar(
+                title=ft.Text("監視対象センサ選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        line = ft.Divider(height=2, color="black")
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(targetTopic):
+            tmp = [appBar , addButton, errorField , line]
+        else:
+            tmp = [appBar , addButton, row ,errorField, line]
+        for i in range(len(targetTopic)):
+            lv.controls.append(ft.Text('監視対象'+str(i+1)))
+            lv.controls.append(targetTopic[i])
+            lv.controls.append(targetSensorType[i])
+            lv.controls.append(targetSensorID[i])
+            lv.controls.append(line)
+        tmp.append(lv)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName = 'target'
+        return ft.View("/view13", tmp)
+
+    def createView20():
+        global helpPageName, dataSource, preProcessData, preProcessSelect, preProcessOption, preProcessMethod
+        def add_button_clicked(e):
+            (flag, val) = checkPreProcessFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view21")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            preProcessData.pop(num-1)
+            preProcessMethod.pop(num-1)
+            preProcessOption.pop(num-1)
+            page.go("/view22")
+        def next_button_clicked(e):
+            (flag, val) = checkPreProcessFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                expandPreProcessData()
+                page.go("/view30")
+        appBar = ft.AppBar(
+                title=ft.Text("データ系列に対する前処理"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('監視対象センサから出力されるデータの系列', size=24)    
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(dataSource)):
+            lv1.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
+        subTitle2 = ft.Text('抽出するデータ系列', size=24)
+        comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        seqSelect = ft.Dropdown(
+            label="データ系列",
+            autofocus=True,
+        )
+        for i in range(len(dataSource)):
+            seqSelect.options.append(ft.dropdown.Option(key = i, text = 'データ系列'+str(i+1)))
+        preProcessData.append(seqSelect)
+        preProcessSelect = ft.Dropdown(
+            label="前処理",
+            autofocus=True,
+            options=[
+                ft.dropdown.Option(key = 0 , text = "そのまま"),
+                ft.dropdown.Option(key = 1 , text = "直前の値との差分"),
+                ft.dropdown.Option(key = 2 , text = "直前の値との変化の傾き(秒あたり)"),
+                ft.dropdown.Option(key = 3 , text = "単純移動平均"),
+                ft.dropdown.Option(key = 4 , text = "線形加重移動平均"),
+            ],
+        )
+        preProcessMethod.append(preProcessSelect)
+        optionInput = ft.TextField(label='移動平均のレンジ(過去何個分か)',value='')
+        preProcessOption.append(optionInput)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(preProcessData):
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+        else:
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+        for i in range(len(preProcessData)):
+            lv2.controls.append(ft.Text('抽出系列'+str(i+1)))
+            lv2.controls.append(preProcessData[i])
+            lv2.controls.append(preProcessMethod[i])
+            lv2.controls.append(preProcessOption[i])
+            lv2.controls.append(line)
+        tmp.append(lv2)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='preProcess'
+        return ft.View("/view20", tmp)
+
+    def createView21():
+        global helpPageName, dataSource, preProcessData, preProcessSelect, preProcessOption, preProcessMethod
+        def add_button_clicked(e):
+            (flag, val) = checkPreProcessFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view20")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            preProcessData.pop(num-1)
+            preProcessMethod.pop(num-1)
+            preProcessOption.pop(num-1)
+            page.go("/view22")
+        def next_button_clicked(e):
+            (flag, val) = checkPreProcessFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                expandPreProcessData()
+                page.go("/view30")
+        appBar = ft.AppBar(
+                title=ft.Text("データ系列に対する前処理"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('監視対象センサから出力されるデータの系列', size=24)
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(dataSource)):
+            lv1.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
+        subTitle2 = ft.Text('抽出するデータ系列', size=24)
+        comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        seqSelect = ft.Dropdown(
+            label="データ系列",
+            autofocus=True,
+        )
+        for i in range(len(dataSource)):
+            seqSelect.options.append(ft.dropdown.Option(key = i, text = 'データ系列'+str(i+1)))
+        preProcessData.append(seqSelect)
+        preProcessSelect = ft.Dropdown(
+            label="前処理",
+            autofocus=True,
+            options=[
+                ft.dropdown.Option(key = 0 , text = "そのまま"),
+                ft.dropdown.Option(key = 1 , text = "直前の値との差分"),
+                ft.dropdown.Option(key = 2 , text = "直前の値との変化の傾き(秒あたり)"),
+                ft.dropdown.Option(key = 3 , text = "単純移動平均"),
+                ft.dropdown.Option(key = 4 , text = "線形加重移動平均"),
+            ],
+        )
+        preProcessMethod.append(preProcessSelect)
+        optionInput = ft.TextField(label='移動平均のレンジ(過去何個分か)',value='')
+        preProcessOption.append(optionInput)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(preProcessData):
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+        else:
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+        for i in range(len(preProcessData)):
+            lv2.controls.append(ft.Text('抽出系列'+str(i+1)))
+            lv2.controls.append(preProcessData[i])
+            lv2.controls.append(preProcessMethod[i])
+            lv2.controls.append(preProcessOption[i])
+            lv2.controls.append(line)
+        tmp.append(lv2)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='preProcess'
+        return ft.View("/view21", tmp)
+
+    def createView22():
+        global helpPageName, dataSource, preProcessData, preProcessSelect, preProcessOption, preProcessMethod
+        def add_button_clicked(e):
+            (flag, val) = checkPreProcessFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view20")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            preProcessData.pop(num-1)
+            preProcessMethod.pop(num-1)
+            preProcessOption.pop(num-1)
+            page.go("/view23")
+        def next_button_clicked(e):
+            (flag, val) = checkPreProcessFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                expandPreProcessData()
+                page.go("/view30")
+        appBar = ft.AppBar(
+                title=ft.Text("データ系列に対する前処理"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('監視対象センサから出力されるデータの系列', size=24)
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(dataSource)):
+            lv1.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
+        subTitle2 = ft.Text('抽出するデータ系列', size=24)
+        comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(preProcessData):
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+        else:
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+        for i in range(len(preProcessData)):
+            lv2.controls.append(ft.Text('抽出系列'+str(i+1)))
+            lv2.controls.append(preProcessData[i])
+            lv2.controls.append(preProcessMethod[i])
+            lv2.controls.append(preProcessOption[i])
+            lv2.controls.append(line)
+        tmp.append(lv2)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='preProcess'
+        return ft.View("/view22", tmp)
+
+    def createView23():
+        global helpPageName, dataSource, preProcessData, preProcessSelect, preProcessOption, preProcessMethod
+        def add_button_clicked(e):
+            (flag, val) = checkPreProcessFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view20")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            preProcessData.pop(num-1)
+            preProcessMethod.pop(num-1)
+            preProcessOption.pop(num-1)
+            page.go("/view22")
+        def next_button_clicked(e):
+            (flag, val) = checkPreProcessFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                expandPreProcessData()
+                #page.go("/view30")
+                page.go("/view30")
+        appBar = ft.AppBar(
+                title=ft.Text("データ系列に対する前処理"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('監視対象センサから出力されるデータの系列', size=24)
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(dataSource)):
+            lv1.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
+        subTitle2 = ft.Text('抽出するデータ系列', size=24)
+        comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(preProcessData):
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+        else:
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+        for i in range(len(preProcessData)):
+            lv2.controls.append(ft.Text('抽出系列'+str(i+1)))
+            lv2.controls.append(preProcessData[i])
+            lv2.controls.append(preProcessMethod[i])
+            lv2.controls.append(preProcessOption[i])
+            lv2.controls.append(line)
+        tmp.append(lv2)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='preProcess'
+        return ft.View("/view23", tmp)
+
+    def createView30():
+        global helpPageName
+        def no_button_clicked(e):
+            page.go("/view40")
+        def yes_button_clicked(e):
+            page.go("/view31")
+        appBar = ft.AppBar(
+                title=ft.Text("統計値算出の有無判断"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        subTitle2 = ft.Text('統計値算出の選択', size=24)
+        comment1 = ft.Text('上記のデータ系列の統計値を算出するか否か選択してください．．')
+        noButton = ft.ElevatedButton(text="作成しない", on_click=no_button_clicked)
+        yesButton = ft.ElevatedButton(text="作成する", on_click=yes_button_clicked)
+        tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, yesButton, noButton]
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='statisticsSwitch'
+        return ft.View("/view30", tmp)
+
+    def createView31():
+        global helpPageName, statisticsData, statisticsLabel, statisticsUnits, statisticsTitle, statistics_h_Title, statistics_v_Title, preProcessDataName
+        def add_button_clicked(e):
+            (flag, val) = checkStatisticsFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view32")
+        def delete_button_clicked(e):
+            global statisticsData, statisticsLabel, statisticsUnits, statisticsTitle, statistics_h_Title, statistics_v_Title
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(statisticsData)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            else:
+                statisticsData.pop(num-1)
+                statisticsLabel.pop(num-1)
+                statisticsUnits.pop(num-1)
+                statisticsTitle.pop(num-1)
+                statistics_h_Title.pop(num-1)
+                statistics_v_Title.pop(num-1)
+                page.go("/view33")
+        def next_button_clicked(e):
+            (flag, val) = checkStatisticsFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view40")
+        appBar = ft.AppBar(
+                title=ft.Text("統計データ算出用，前処理済み系列の選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
+        comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(statisticsData):
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+        else:
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        seqSelect = ft.Dropdown(
+            label="前処理済みデータ系列",
+            autofocus=True,
+        )
+        for i in range(len(preProcessDataName)):
+            seqSelect.options.append(ft.dropdown.Option(key = i, text = 'データ系列'+str(i+1)+ preProcessDataName[i]))
+        statisticsData.append(seqSelect)
+        dataLabelBox = ft.TextField(label='データに付与する名前',value='')
+        statisticsLabel.append(dataLabelBox)
+        statisticsUnitsBox = ft.TextField(label='度数分布表示の際の横軸分割数',value='')
+        statisticsUnits.append(statisticsUnitsBox)
+        statisticsTitleBox = ft.TextField(label='度数分布グラフのタイトル',value='')
+        statisticsTitle.append(statisticsTitleBox)
+        statistics_h_Title_Box = ft.TextField(label='度数分布グラフ横軸見出し',value='')
+        statistics_h_Title.append(statistics_h_Title_Box)
+        statistics_v_Title_Box = ft.TextField(label='度数分布グラフ縦軸見出し',value='')
+        statistics_v_Title.append(statistics_v_Title_Box)
+        for i in range(len(statisticsData)):
+            lv2.controls.append(ft.Text('対象データ'+str(i+1)))
+            lv2.controls.append(statisticsData[i])
+            lv2.controls.append(statisticsLabel[i])
+            lv2.controls.append(statisticsUnits[i])
+            lv2.controls.append(statisticsTitle[i])
+            lv2.controls.append(statistics_h_Title[i])
+            lv2.controls.append(statistics_v_Title[i])
+            lv2.controls.append(line)
+        tmp.append(lv2)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='statisticsData'
+        return ft.View("/view31", tmp)
+
+    def createView32():
+        global helpPageName, statisticsData, statisticsLabel, statisticsUnits, statisticsTitle, statistics_h_Title, statistics_v_Title, preProcessDataName
+        def add_button_clicked(e):
+            (flag, val) = checkStatisticsFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view31")
+        def delete_button_clicked(e):
+            global statisticsData, statisticsLabel, statisticsUnits, statisticsTitle, statistics_h_Title, statistics_v_Title
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(statisticsData)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            else:
+                statisticsData.pop(num-1)
+                statisticsLabel.pop(num-1)
+                statisticsUnits.pop(num-1)
+                statisticsTitle.pop(num-1)
+                statistics_h_Title.pop(num-1)
+                statistics_v_Title.pop(num-1)
+                page.go("/view33")
+        def next_button_clicked(e):
+            (flag, val) = checkStatisticsFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view40")
+        appBar = ft.AppBar(
+                title=ft.Text("統計データ算出用，前処理済み系列の選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
+        comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(statisticsData):
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+        else:
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        seqSelect = ft.Dropdown(
+            label="前処理済みデータ系列",
+            autofocus=True,
+        )
+        for i in range(len(preProcessDataName)):
+            seqSelect.options.append(ft.dropdown.Option(key = i, text = 'データ系列'+str(i+1)+ preProcessDataName[i]))
+        statisticsData.append(seqSelect)
+        dataLabelBox = ft.TextField(label='データに付与する名前',value='')
+        statisticsLabel.append(dataLabelBox)
+        statisticsUnitsBox = ft.TextField(label='度数分布表示の際の横軸分割数',value='')
+        statisticsUnits.append(statisticsUnitsBox)
+        statisticsTitleBox = ft.TextField(label='度数分布グラフのタイトル',value='')
+        statisticsTitle.append(statisticsTitleBox)
+        statistics_h_Title_Box = ft.TextField(label='度数分布グラフ横軸見出し',value='')
+        statistics_h_Title.append(statistics_h_Title_Box)
+        statistics_v_Title_Box = ft.TextField(label='度数分布グラフ縦軸見出し',value='')
+        statistics_v_Title.append(statistics_v_Title_Box)
+        for i in range(len(statisticsData)):
+            lv2.controls.append(ft.Text('対象データ'+str(i+1)))
+            lv2.controls.append(statisticsData[i])
+            lv2.controls.append(statisticsLabel[i])
+            lv2.controls.append(statisticsUnits[i])
+            lv2.controls.append(statisticsTitle[i])
+            lv2.controls.append(statistics_h_Title[i])
+            lv2.controls.append(statistics_v_Title[i])
+            lv2.controls.append(line)
+        tmp.append(lv2)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='statisticsData'
+        return ft.View("/view32", tmp)
+
+    def createView33():
+        global helpPageName, statisticsData, statisticsLabel, statisticsUnits, statisticsTitle, statistics_h_Title, statistics_v_Title, preProcessDataName
+        def add_button_clicked(e):
+            (flag, val) = checkStatisticsFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view31")
+        def delete_button_clicked(e):
+            global statisticsData, statisticsLabel, statisticsUnits, statisticsTitle, statistics_h_Title, statistics_v_Title
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(statisticsData)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            else:
+                statisticsData.pop(num-1)
+                statisticsLabel.pop(num-1)
+                statisticsUnits.pop(num-1)
+                statisticsTitle.pop(num-1)
+                statistics_h_Title.pop(num-1)
+                statistics_v_Title.pop(num-1)
+                page.go("/view34")
+        def next_button_clicked(e):
+            (flag, val) = checkStatisticsFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view40")
+        appBar = ft.AppBar(
+                title=ft.Text("統計データ算出用，前処理済み系列の選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
+        comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(statisticsData):
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+        else:
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(statisticsData)):
+            lv2.controls.append(ft.Text('対象データ'+str(i+1)))
+            lv2.controls.append(statisticsData[i])
+            lv2.controls.append(statisticsLabel[i])
+            lv2.controls.append(statisticsUnits[i])
+            lv2.controls.append(statisticsTitle[i])
+            lv2.controls.append(statistics_h_Title[i])
+            lv2.controls.append(statistics_v_Title[i])
+            lv2.controls.append(line)
+        tmp.append(lv2)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='statisticsData'
+        return ft.View("/view33", tmp)
+
+    def createView34():
+        global helpPageName, statisticsData, statisticsLabel, statisticsUnits, statisticsTitle, statistics_h_Title, statistics_v_Title, preProcessDataName
+        def add_button_clicked(e):
+            (flag, val) = checkStatisticsFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view31")
+        def delete_button_clicked(e):
+            global statisticsData, statisticsLabel, statisticsUnits, statisticsTitle, statistics_h_Title, statistics_v_Title
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(statisticsData)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            else:
+                statisticsData.pop(num-1)
+                statisticsLabel.pop(num-1)
+                statisticsUnits.pop(num-1)
+                statisticsTitle.pop(num-1)
+                statistics_h_Title.pop(num-1)
+                statistics_v_Title.pop(num-1)
+                page.go("/view33")
+        def next_button_clicked(e):
+            (flag, val) = checkStatisticsFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view40")
+        appBar = ft.AppBar(
+                title=ft.Text("各種処理用，前処理済み系列の選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
+        comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        errorField = ft.Text('')
+        row = ft.Row([deleteBox, deleteButton])
+        if 1==len(statisticsData):
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+        else:
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(statisticsData)):
+            lv2.controls.append(ft.Text('対象データ'+str(i+1)))
+            lv2.controls.append(statisticsData[i])
+            lv2.controls.append(statisticsLabel[i])
+            lv2.controls.append(statisticsUnits[i])
+            lv2.controls.append(statisticsTitle[i])
+            lv2.controls.append(statistics_h_Title[i])
+            lv2.controls.append(statistics_v_Title[i])
+            lv2.controls.append(line)
+        tmp.append(lv2)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='statisticsData'
+        return ft.View("/view34", tmp)
+
+    def createView40():
+        global helpPageName, preProcessDataName
+        def next_button_clicked(e):
+            global numOfTimeSeriesGraph
+            pattern = '^[0-9]+$'
+            if None==re.match(pattern,inputBox.value):
+                errorField.value = 'グラフ数(正の整数)を半角数字で入力してください．'
+                page.update()
+            else:
+                num = int(inputBox.value)
+                if num < 0:
+                    errorField.value = 'グラフ数(正の整数)を半角数字で入力してください．'
+                    page.update()
+                elif num == 0:
+                    numOfTimeSeriesGraph = num
+                    page.go("/view50")
+                else:
+                    numOfTimeSeriesGraph = num
+                    page.go("/view41")
+        appBar = ft.AppBar(
+                title=ft.Text("時系列グラフ作成数の選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        subTitle2 = ft.Text('作成するグラフ数の選択', size=24)
+        comment1 = ft.Text('上記のデータ系列から，何個の時系列グラフを作成するか入力してください．作成しない場合は，「0」を入力してください．')
+        inputBox = ft.TextField(label='グラフ数',value='')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        errorField = ft.Text('')
+        tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, inputBox, errorField, line, nextButton]
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='numOfTimeSeriesGraph'
+        return ft.View("/view40", tmp)
+
+    def createView41():
+        global helpPageName, preProcessDataName, numOfTimeSeriesGraph, timeSeriesGraphData, timeSeriesGraphLabel, timeSeriesGraphTitle, timeSeriesGraph_h_Title, timeSeriesGraph_v_Title, timeSeriesGraphButtonState
+        def next_button_clicked(e):
+            global timeSeriesGraphButtonState
+            (flag, msg) = checkTimeSeriesGraphFields()
+            if flag:
+                errorField.value = msg
+                page.update()
+            else:
+                if len(timeSeriesGraphTitle) == numOfTimeSeriesGraph:
+                    timeSeriesGraphButtonState=-1
+                    page.go("/view50")
+                else:
+                    timeSeriesGraphButtonState=2
+                    page.go("/view42")
+        def add_button_clicked(e):
+            global timeSeriesGraphButtonState
+            (flag, msg) = checkTimeSeriesGraphFields()
+            if flag:
+                errorField.value = msg
+                page.update()
+            else:
+                timeSeriesGraphButtonState=0
+                page.go("/view42")
+        def delete_button_clicked(e):
+            global timeSeriesGraphData, timeSeriesGraphLabel, timeSeriesGraphButtonState
+            target = int(deleteBox.value)-1
+            lastGroup = len(timeSeriesGraphData)-1
+            last = len(timeSeriesGraphData[lastGroup])-1
+            if (0> target) or (target > last):
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            else:
+                timeSeriesGraphData[lastGroup].pop(target)
+                timeSeriesGraphLabel[lastGroup].pop(target)
+                timeSeriesGraphButtonState=1
+                page.go("/view42")
+        if (timeSeriesGraphButtonState==-1) or (timeSeriesGraphButtonState==2):
+            appBar = ft.AppBar(
+                title=ft.Text("時系列グラフ"+str(len(timeSeriesGraphTitle)+1)+"番目の定義"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        else:
+            appBar = ft.AppBar(
+                title=ft.Text("時系列グラフ"+str(len(timeSeriesGraphTitle)-1)+"番目の定義"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('前処理済みデータ系列', size=24)
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        comment1 = ft.Text('グラフのタイトルやどの前処理済みデータ系列を用いるかを定義してください．')
+        index = len(timeSeriesGraphTitle)-1
+        if (timeSeriesGraphButtonState==1) or  (timeSeriesGraphButtonState==0):
+            titleBox = timeSeriesGraphTitle[index]
+            hTitleBox = timeSeriesGraph_h_Title[index]
+            vTitleBox = timeSeriesGraph_v_Title[index]
+        else:
+            titleBox = ft.TextField(label='グラフのタイトル',value='')
+            hTitleBox = ft.TextField(label='グラフの横軸のタイトル(名称や単位)',value='')
+            vTitleBox = ft.TextField(label='グラフの縦軸のタイトル(名称や単位)',value='')
+            timeSeriesGraphTitle.append(titleBox)
+            timeSeriesGraph_h_Title.append(hTitleBox)
+            timeSeriesGraph_v_Title.append(vTitleBox)
+        subTitle2 = ft.Text('時系列グラフ'+str(len(timeSeriesGraphTitle))+'番目の定義', size=24)
+        subTitle3 = ft.Text('前処理済みデータ系列の選択', size=24) 
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="描画対象系列追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象グラフ系列番号',value='')
+        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        row = ft.Row([deleteBox, deleteButton])
+        errorField = ft.Text('')
+        if (timeSeriesGraphButtonState==-1) or (timeSeriesGraphButtonState==2):
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, errorField]
+        else:
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, row, errorField]
+        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        seqSelect = ft.Dropdown(
+            label="前処理済みデータ系列",
+            autofocus=True,
+        )
+        for i in range(len(preProcessDataName)):
+            seqSelect.options.append(ft.dropdown.Option(key = i, text = 'データ系列'+str(i+1)+ preProcessDataName[i]))
+        labelBox = ft.TextField(label='データ系列の名前(グラフの凡例に利用)',value='')
+        #
+        if (timeSeriesGraphButtonState!=1):
+            if timeSeriesGraphButtonState == 0:
+                timeSeriesGraphData[index].append(seqSelect)
+                timeSeriesGraphLabel[index].append(labelBox)
+            else:
+                timeSeriesGraphData.append([seqSelect])
+                timeSeriesGraphLabel.append([labelBox])
+        last = len(timeSeriesGraphData)-1
+        for i in range(len(timeSeriesGraphData[last])):
+            lv2.controls.append(ft.Text('グラフ系列'+str(i+1)))
+            lv2.controls.append(timeSeriesGraphData[last][i])
+            lv2.controls.append(timeSeriesGraphLabel[last][i])
+        tmp.append(lv2)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='timeSeriesGraph'
+        return ft.View("/view41", tmp)
+
+    def createView42():
+        global helpPageName, preProcessDataName, numOfTimeSeriesGraph, timeSeriesGraphData, timeSeriesGraphLabel, timeSeriesGraphTitle, timeSeriesGraph_h_Title, timeSeriesGraph_v_Title, timeSeriesGraphButtonState
+        def next_button_clicked(e):
+            global timeSeriesGraphButtonState
+            (flag, msg) = checkTimeSeriesGraphFields()
+            if flag:
+                errorField.value = msg
+                page.update()
+            else:
+                if len(timeSeriesGraphTitle) == numOfTimeSeriesGraph:
+                    timeSeriesGraphButtonState=-1
+                    page.go("/view50")
+                else:
+                    timeSeriesGraphButtonState=2
+                    page.go("/view41")
+        def add_button_clicked(e):
+            global timeSeriesGraphButtonState
+            (flag, msg) = checkTimeSeriesGraphFields()
+            if flag:
+                errorField.value = msg
+                page.update()
+            else:
+                timeSeriesGraphButtonState=0
+                page.go("/view41")
+        def delete_button_clicked(e):
+            global timeSeriesGraphData, timeSeriesGraphLabel, timeSeriesGraphButtonState
+            target = int(deleteBox.value)-1
+            lastGroup = len(timeSeriesGraphData)-1
+            last = len(timeSeriesGraphData[lastGroup])-1
+            if (0> target) or (target > last):
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            else:
+                timeSeriesGraphData[lastGroup].pop(target)
+                timeSeriesGraphLabel[lastGroup].pop(target)
+                timeSeriesGraphButtonState=1
+                page.go("/view41")
+        if (timeSeriesGraphButtonState==-1) or (timeSeriesGraphButtonState==2):
+            appBar = ft.AppBar(
+                title=ft.Text("時系列グラフ"+str(len(timeSeriesGraphTitle)+1)+"番目の定義"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        else:
+            appBar = ft.AppBar(
+                title=ft.Text("時系列グラフ"+str(len(timeSeriesGraphTitle)-1)+"番目の定義"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('前処理済みデータ系列', size=24)
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        comment1 = ft.Text('グラフのタイトルやどの前処理済みデータ系列を用いるかを定義してください．')
+        index = len(timeSeriesGraphTitle)-1
+        if (timeSeriesGraphButtonState==1) or  (timeSeriesGraphButtonState==0):
+            titleBox = timeSeriesGraphTitle[index]
+            hTitleBox = timeSeriesGraph_h_Title[index]
+            vTitleBox = timeSeriesGraph_v_Title[index]
+        else:
+            titleBox = ft.TextField(label='グラフのタイトル',value='')
+            hTitleBox = ft.TextField(label='グラフの横軸のタイトル(名称や単位)',value='')
+            vTitleBox = ft.TextField(label='グラフの縦軸のタイトル(名称や単位)',value='')
+            timeSeriesGraphTitle.append(titleBox)
+            timeSeriesGraph_h_Title.append(hTitleBox)
+            timeSeriesGraph_v_Title.append(vTitleBox)
+        subTitle2 = ft.Text('時系列グラフ'+str(len(timeSeriesGraphTitle))+'番目の定義', size=24)
+        subTitle3 = ft.Text('前処理済みデータ系列の選択', size=24) 
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        addButton = ft.ElevatedButton(text="描画対象系列追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象グラフ系列番号',value='')
+        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        row = ft.Row([deleteBox, deleteButton])
+        errorField = ft.Text('')
+        if (timeSeriesGraphButtonState==-1) or (timeSeriesGraphButtonState==2):
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, errorField]
+        else:
+            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, row, errorField]
+        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        seqSelect = ft.Dropdown(
+            label="前処理済みデータ系列",
+            autofocus=True,
+        )
+        for i in range(len(preProcessDataName)):
+            seqSelect.options.append(ft.dropdown.Option(key = i, text = 'データ系列'+str(i+1)+ preProcessDataName[i]))
+        labelBox = ft.TextField(label='データ系列の名前(グラフの凡例に利用)',value='')
+        #
+        if (timeSeriesGraphButtonState!=1):
+            if timeSeriesGraphButtonState == 0:
+                timeSeriesGraphData[index].append(seqSelect)
+                timeSeriesGraphLabel[index].append(labelBox)
+            else:
+                timeSeriesGraphData.append([seqSelect])
+                timeSeriesGraphLabel.append([labelBox])
+        last = len(timeSeriesGraphData)-1
+        for i in range(len(timeSeriesGraphData[last])):
+            lv2.controls.append(ft.Text('グラフ系列'+str(i+1)))
+            lv2.controls.append(timeSeriesGraphData[last][i])
+            lv2.controls.append(timeSeriesGraphLabel[last][i])
+        tmp.append(lv2)
+        tmp.append(nextButton)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='timeSeriesGraph'
+        return ft.View("/view42", tmp)
+
+    def createView50():
+        global helpPageName, preProcessDataName, numOfCorrelationAnalysis
+        def next_button_clicked(e):
+            global numOfCorrelationAnalysis
+            pattern = '^[0-9]+$'
+            if None==re.match(pattern,inputBox.value):
+                errorField.value = '相関分析する組み合わせの数(正の整数)を半角数字で入力してください．'
+                page.update()
+            else:
+                num = int(inputBox.value)
+                if num < 0:
+                    errorField.value = '相関分析する組み合わせの数(正の整数)を半角数字で入力してください．'
+                    page.update()
+                elif num == 0:
+                    numOfCorrelationAnalysis = num
+                    page.go("/view60")
+                else:
+                    numOfCorrelationAnalysis = num
+                    page.go("/view51")
+                    #page.go("/view60")
+        appBar = ft.AppBar(
+                title=ft.Text("相関分析を行うデータの組み合わせの数の入力"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        subTitle2 = ft.Text('相関分析を行うデータ系列の組み合わせ入力', size=24)
+        comment1 = ft.Text('上記のデータ系列から，何組の相関分析を行うか入力してください．相関分析を行わない場合は，「0」を入力してください．')
+        inputBox = ft.TextField(label='相関分析組み合わせ数',value='')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        errorField = ft.Text('')
+        tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, inputBox, errorField, line, nextButton]
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='numOfCorrelationAnalysis'
+        return ft.View("/view50", tmp)
+
+    def createView51():
+        global helpPageName, preProcessDataName, numOfCorrelationAnalysis, correlationAnalysisPair, correlationAnalysisPairLabel, correlationAnalysisGraphTitle
+        def next_button_clicked(e):
+            (flag, msg) = checkCorrelationAnalysisDatas()
+            if flag:
+                errorField.value = msg
+                page.update()
+            else:
+                if len(correlationAnalysisPair) == numOfCorrelationAnalysis:
+                    page.go("/view60")
+                else:
+                    page.go("/view52")
+        num = len(correlationAnalysisPair)
+        appBar = ft.AppBar(
+                title=ft.Text("相関分析対象"+str(num+1)+"番目の定義"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        subTitle0 = ft.Text('前処理済みデータ系列', size=24)
+        comment0  = ft.Text('監視対象となる前処理済みのデータ')
+        lv0 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv0.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('データ系列の選択', size=24)
+        subTitle2 = ft.Text('データ系列の名前定義', size=24)
+        subTitle3 = ft.Text('散布図の定義', size=24)
+        comment1  = ft.Text('前処理済みデータ系列から2つ選んでください．')
+        comment2  = ft.Text('選択してデータに名前(タイトル)をつけてください．')
+        comment3  = ft.Text('選択してデータの組み合わせを散布図として表す場合のタイトル/横軸見出し/縦軸見出しを入力してください．')
+        data_h_Select = ft.Dropdown(
+            label="散布図横軸データ系列",
+            autofocus=True,
+        )
+        for i in range(len(preProcessDataName)):
+            data_h_Select.options.append(ft.dropdown.Option(key = i, text = 'データ系列'+str(i+1)+ preProcessDataName[i]))
+        data_v_Select = ft.Dropdown(
+            label="散布図縦軸データ系列",
+            autofocus=True,
+        )
+        for i in range(len(preProcessDataName)):
+            data_v_Select.options.append(ft.dropdown.Option(key = i, text = 'データ系列'+str(i+1)+ preProcessDataName[i]))
+        correlationAnalysisPair.append((data_h_Select, data_v_Select))
+
+        dataLabel_h_Box = ft.TextField(label='横軸データに付与するラベル(名前)',value='')
+        dataLabel_v_Box = ft.TextField(label='縦軸データに付与するラベル(名前)',value='')
+        correlationAnalysisPairLabel.append((dataLabel_h_Box, dataLabel_v_Box))
+
+        graphTitleBox = ft.TextField(label='散布図タイトル',value='')
+        graph_h_TitleBox = ft.TextField(label='散布図横軸ラベル',value='')
+        graph_v_TitleBox = ft.TextField(label='散布図縦軸ラベル',value='')
+        correlationAnalysisGraphTitle.append((graphTitleBox,graph_h_TitleBox,graph_v_TitleBox))
+
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        errorField = ft.Text('')
+        tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, data_h_Select, data_v_Select, subTitle2, comment2, dataLabel_h_Box, dataLabel_v_Box, line, subTitle3, comment3, graphTitleBox, graph_h_TitleBox, graph_v_TitleBox, line, errorField, nextButton]
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='correlationAnalysis'
+        return ft.View("/view51", tmp)
+
+    def createView52():
+        global helpPageName, preProcessDataName, numOfCorrelationAnalysis, correlationAnalysisPair, correlationAnalysisPairLabel, correlationAnalysisGraphTitle
+        def next_button_clicked(e):
+            (flag, msg) = checkCorrelationAnalysisDatas()
+            if flag:
+                errorField.value = msg
+                page.update()
+            else:
+                if len(correlationAnalysisPair) == numOfCorrelationAnalysis:
+                    page.go("/view60")
+                else:
+                    page.go("/view51")
+        num = len(correlationAnalysisPair)
+        appBar = ft.AppBar(
+                title=ft.Text("相関分析対象"+str(num+1)+"番目の定義"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        subTitle0 = ft.Text('前処理済みデータ系列', size=24)
+        comment0  = ft.Text('監視対象となる前処理済みのデータ')
+        lv0 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv0.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('データ系列の選択', size=24)
+        subTitle2 = ft.Text('データ系列の名前定義', size=24)
+        subTitle3 = ft.Text('散布図の定義', size=24)
+        comment1  = ft.Text('前処理済みデータ系列から2つ選んでください．')
+        comment2  = ft.Text('選択してデータに名前(タイトル)をつけてください．')
+        comment3  = ft.Text('選択してデータの組み合わせを散布図として表す場合のタイトル/横軸見出し/縦軸見出しを入力してください．')
+        data_h_Select = ft.Dropdown(
+            label="散布図横軸データ系列",
+            autofocus=True,
+        )
+        for i in range(len(preProcessDataName)):
+            data_h_Select.options.append(ft.dropdown.Option(key = i, text = 'データ系列'+str(i+1)+ preProcessDataName[i]))
+        data_v_Select = ft.Dropdown(
+            label="散布図縦軸データ系列",
+            autofocus=True,
+        )
+        for i in range(len(preProcessDataName)):
+            data_v_Select.options.append(ft.dropdown.Option(key = i, text = 'データ系列'+str(i+1)+ preProcessDataName[i]))
+        correlationAnalysisPair.append((data_h_Select, data_v_Select))
+
+        dataLabel_h_Box = ft.TextField(label='横軸データに付与するラベル(名前)',value='')
+        dataLabel_v_Box = ft.TextField(label='縦軸データに付与するラベル(名前)',value='')
+        correlationAnalysisPairLabel.append((dataLabel_h_Box, dataLabel_v_Box))
+
+        graphTitleBox = ft.TextField(label='散布図タイトル',value='')
+        graph_h_TitleBox = ft.TextField(label='散布図横軸ラベル',value='')
+        graph_v_TitleBox = ft.TextField(label='散布図縦軸ラベル',value='')
+        correlationAnalysisGraphTitle.append((graphTitleBox,graph_h_TitleBox,graph_v_TitleBox))
+
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        errorField = ft.Text('')
+        tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, data_h_Select, data_v_Select, subTitle2, comment2, dataLabel_h_Box, dataLabel_v_Box, line, subTitle3, comment3, graphTitleBox, graph_h_TitleBox, graph_v_TitleBox, line, errorField, nextButton]
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='correlationAnalysis'
+        return ft.View("/view52", tmp)
+
+    def createView60():
+        global helpPageName, preProcessDataName, numOfRule, numOfLibraries
+        def next_button_clicked(e):
+            global numOfRule, numOfLibraries
+            pattern = '^[0-9]+$'
+            if None==re.match(pattern,ruleBox.value):
+                errorField.value = 'データの監視(エラーチェック)を行うルール数(正の整数)を半角数字で入力してください．'
+                page.update()
+            else:
+                num1 = int(ruleBox.value)
+                num2 = int(libraryBox.value)
+                if num1 < 0:
+                    errorField.value = 'データの監視(エラーチェック)を行うルール数(正の整数)を半角数字で入力してください．'
+                    page.update()
+                elif num1 == 0:
+                    numOfRule = num1
+                    page.go("/view80")
+                elif None==re.match(pattern,libraryBox.value):
+                    errorField.value = '利用するライブラリ数(正の整数)を半角数字で入力してください．'
+                    page.update()
+                elif num2 < 0:
+                    errorField.value = '利用するライブラリ数(正の整数)を半角数字で入力してください．'
+                    page.update()
+                else:
+                    numOfRule = num1
+                    numOfLibraries = num2
+                    page.go("/view61")
+        appBar = ft.AppBar(
+                title=ft.Text("データの監視(エラーチェック)を行うルール数の入力"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('前処理済みデータ系列', size=24)
+        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        subTitle2 = ft.Text('データの監視(エラーチェック)を行うルール数入力', size=24)
+        comment2 = ft.Text('上記のデータ系列から，監視ルールの数を入力してください．監視を行わない場合は，「0」を入力してください．')
+        ruleBox = ft.TextField(label='ルール数',value='')
+        subTitle3 = ft.Text('監視ルール用ライブラリ数', size=24)
+        comment3 = ft.Text('ルールを構成するプログラムを作成するために，Javascriptのライブラリが必要な場合，その数を入力してください．不要な場合は「0」としてください．')
+        comment4 = ft.Text('なお，定義無しに利用できるライブラリも存在するため，詳細はマニュアルやヘルプを参照してください．')
+        libraryBox = ft.TextField(label='ライブラリ数',value='')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        errorField = ft.Text('')
+        tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment2, ruleBox, subTitle3, comment3, comment4, libraryBox, errorField, line, nextButton]
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='numOfRule'
+        return ft.View("/view60", tmp)
+
+    def createView61():
+        global helpPageName, preProcessDataName, numOfRule, dataRule, dataRuleMessage
+        def next_button_clicked(e):
+            (flag, msg) = checkDataRules()
+            if flag:
+                errorField.value = msg
+                page.update()
+            else:
+                if len(dataRule) == numOfRule:
+                    if numOfLibraries > 0:
+                        page.go("/view70")
+                    else:
+                        page.go("/view80")
+                else:
+                    page.go("/view62")
+        num = len(dataRuleMessage)
+        appBar = ft.AppBar(
+                title=ft.Text("データ監視ルール"+str(num+1)+"番目の入力"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        subTitle0 = ft.Text('前処理済みデータ系列', size=24)
+        comment0  = ft.Text('監視対象となる前処理済みのデータ')
+        lv0 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv0.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('ルールの入力', size=24)
+        subTitle2 = ft.Text('警告メッセージの入力', size=24)
+        comment1  = ft.Text('ルールをプログラム形式で入力してください．具体的な方法はヘルプとドキュメントを参照してください．')
+        comment2  = ft.Text('上記ルールに該当した場合に，Webページに表示するメッセージを入力してください．')
+        ruleBox = ft.TextField(label='ルール',value='', multiline=True, min_lines=1, max_lines=10)
+        dataRule.append(ruleBox)
+        messageBox = ft.TextField(label='警告メッセージ文面',value='')
+        dataRuleMessage.append(messageBox)
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        errorField = ft.Text('')
+        tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, ruleBox, line, subTitle2, comment2, messageBox, line, errorField, nextButton]
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='dataRule'
+        return ft.View("/view61", tmp)
+
+    def createView62():
+        global helpPageName, preProcessDataName, numOfRule, dataRule, dataRuleMessage
+        def next_button_clicked(e):
+            (flag, msg) = checkDataRules()
+            if flag:
+                errorField.value = msg
+                page.update()
+            else:
+                if len(dataRule) == numOfRule:
+                    if numOfLibraries > 0:
+                        page.go("/view70")
+                    else:
+                        page.go("/view80")
+                else:
+                    page.go("/view61")
+        num = len(dataRuleMessage)
+        appBar = ft.AppBar(
+                title=ft.Text("データ監視ルール"+str(num+1)+"番目の入力"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        subTitle0 = ft.Text('前処理済みデータ系列', size=24)
+        comment0  = ft.Text('監視対象となる前処理済みのデータ')
+        lv0 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(preProcessDataName)):
+            lv0.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('ルールの入力', size=24)
+        subTitle2 = ft.Text('警告メッセージの入力', size=24)
+        comment1  = ft.Text('ルールをJavascriptプログラム形式で入力してください．具体的な方法はヘルプとドキュメントを参照してください．')
+        comment2  = ft.Text('上記ルールに該当した場合に，Webページに表示するメッセージを入力してください．')
+        ruleBox = ft.TextField(label='ルール',value='', multiline=True, min_lines=1, max_lines=10)
+        dataRule.append(ruleBox)
+        messageBox = ft.TextField(label='警告メッセージ文面',value='')
+        dataRuleMessage.append(messageBox)
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        errorField = ft.Text('')
+        tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, ruleBox, line, subTitle2, comment2, messageBox, line, errorField, nextButton]
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='dataRule'
+        return ft.View("/view62", tmp)
+
+    def createView70():
+        global helpPageName, numOfLibraries, libraryType, librarySrc, libraryIntegrity, libraryCrossorigin, libraryReferrerpolicy
+        def next_button_clicked(e):
+            msg = checkLibraryDefinition()
+            if msg == '':
+                page.go("/view80")
+            else:
+                errorField.value = msg
+                page.update()
+        appBar = ft.AppBar(
+                title=ft.Text("データ監視ルール用ライブラリ情報の入力"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        subTitle0 = ft.Text('ライブラリ定義', size=24)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        for i in range(numOfLibraries):
+            typeBox = ft.TextField(label='タイプ',value='')
+            srcBox = ft.TextField(label='ライブラリソース(URL)',value='')
+            integrityBox = ft.TextField(label='Integrity値',value='')
+            crossoriginBox = ft.TextField(label='crossorigin定義',value='')
+            referrerpolicyBox = ft.TextField(label='referrerpolicy定義',value='')
+            libraryType.append(typeBox)
+            librarySrc.append(srcBox)
+            libraryIntegrity.append(integrityBox)
+            libraryCrossorigin.append(crossoriginBox)
+            libraryReferrerpolicy.append(referrerpolicyBox)
+            lv.controls.append(ft.Text('ライブラリ'+str(i+1)+'番'))
+            lv.controls.append(typeBox)
+            lv.controls.append(srcBox)
+            lv.controls.append(integrityBox)
+            lv.controls.append(crossoriginBox)
+            lv.controls.append(referrerpolicyBox)
+        errorField = ft.Text('')
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        tmp = [appBar, subTitle0, lv, line, errorField, nextButton]
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName='library'
+        return ft.View("/view70", tmp)
+
+    def createView80():
+        global helpPageName
+        def pick_output_file_result(e: ft.FilePickerResultEvent):
+            global output_file_name
+            selected_output_file.value = e.path
+            output_file_name = selected_output_file.value
+            selected_output_file.update()
+
+        def exec_button_clicked(e):
+            global error, parts
+            if output_file_name=="":
+                warning_message.value = "Please select output file."
+                warning_message.update()
+                return
+            error = outputConfig(output_file_name)
+            if '' != error:
+                ft.app(target=errorWindow)
+            page.window_destroy()
+        
+        appBar = ft.AppBar(
+                title=ft.Text("設定ファイル出力"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        subTitle = ft.Text('出力ファイル選択', size=24)
+        pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
+        pick_output_file_dialog_button = ft.ElevatedButton(
+            "output file",
+            icon=ft.icons.DOWNLOAD,
+            on_click=lambda _: pick_output_file_dialog.save_file(
+            ),
+        )
+        page.overlay.append(pick_output_file_dialog)
+        selected_output_file = ft.Text()
+        exec_button = ft.ElevatedButton(text="設定ファイル出力", on_click=exec_button_clicked)
+        warning_message = ft.Text()
+        row = ft.Row(
+            [
+                exec_button,
+                warning_message,
+            ]
+        )
+        finish_button = ft.ElevatedButton(text="終了", on_click=lambda e: page.window_destroy())
+        tmp = [appBar, line, subTitle, pick_output_file_dialog_button, selected_output_file, row, finish_button ]
+        helpPageName='fileOutput'
+        return ft.View("/view80", tmp)
+
+    def route_change(handler):
+        troute = ft.TemplateRoute(handler.route)
+        page.views.clear()
+        if troute.match("/view5"):
+            page.views.append(createView5())
+        elif troute.match("/view10"):
+            page.views.append(createView10())
+        elif troute.match("/view11"):
+            page.views.append(createView11())
+        elif troute.match("/view12"):
+            page.views.append(createView12())
+        elif troute.match("/view13"):
+            page.views.append(createView13())
+        elif troute.match("/view20"):
+            page.views.append(createView20())
+        elif troute.match("/view21"):
+            page.views.append(createView21())
+        elif troute.match("/view22"):
+            page.views.append(createView22())
+        elif troute.match("/view23"):
+            page.views.append(createView23())
+        elif troute.match("/view30"):
+            page.views.append(createView30())
+        elif troute.match("/view31"):
+            page.views.append(createView31())
+        elif troute.match("/view32"):
+            page.views.append(createView32())
+        elif troute.match("/view33"):
+            page.views.append(createView33())
+        elif troute.match("/view34"):
+            page.views.append(createView34())
+        elif troute.match("/view40"):
+            page.views.append(createView40())
+        elif troute.match("/view41"):
+            page.views.append(createView41())
+        elif troute.match("/view42"):
+            page.views.append(createView42())
+        elif troute.match("/view50"):
+            page.views.append(createView50())
+        elif troute.match("/view51"):
+            page.views.append(createView51())
+        elif troute.match("/view52"):
+            page.views.append(createView52())
+        elif troute.match("/view60"):
+            page.views.append(createView60())
+        elif troute.match("/view61"):
+            page.views.append(createView61())
+        elif troute.match("/view62"):
+            page.views.append(createView62())
+        elif troute.match("/view70"):
+            page.views.append(createView70())
+        elif troute.match("/view80"):
+            page.views.append(createView80())
+        page.update()
+    page.on_route_change = route_change
+    page.title = "define Sensor Viewer"
+    page.go("/view5")
+
+if __name__ == '__main__':
+    error = loadHelp(help_file)
+    if error != "":
+        ft.app(target=errorWindow)
+    else:
+        ft.app(target=mainWindow)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+

@@ -1,0 +1,769 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from flet_multi_page import subPage
+import flet as ft
+import os
+from paho.mqtt import client as mqtt_client
+import json
+from enum import Enum
+import yaml
+import sqlite3
+
+help_file="Help/mqttListner.yaml"
+
+timeout = 60
+apiVersion = mqtt_client.CallbackAPIVersion.VERSION2
+
+class SensorType(Enum):
+    ACCELEROMETER         = 1
+    MAGNETIC_FIELD        = 2
+    ORIENTATION           = 3
+    GYROSCOPE             = 4
+    LIGHT                 = 5
+    PRESSURE              = 6
+    PROXIMITY             = 7
+    GRAVITY               = 8
+    LINEAR_ACCELERATION   = 9
+    ROTATION_VECTOR       = 10
+    RELATIVE_HUMIDITY     = 11
+    AMBIENT_TEMPERATURE   = 12
+    VOLTAGE               = 13
+    CURRENT               = 14
+    COLOR                 = 15
+    SIMPLE                = 16
+    ANGLE                 = 17
+    ONE_AXIS_GYRO         = 18
+    DISTANCE              = 19
+    LARGE_INT             = 20
+    DUST                  = 21
+    IRREMOTE              = 22
+    POSITION              = 23
+    DATE                  = 24
+    SPEED_KNOT            = 25
+    SIMPLE_ANALOG         = 26
+
+class SensorTypeIndex(Enum):
+    ACCELEROMETER         = 0
+    GYROSCOPE             = 6
+    LIGHT                 = 12
+    PRESSURE              = 14
+    LINEAR_ACCELERATION   = 16
+    RELATIVE_HUMIDITY     = 18
+    AMBIENT_TEMPERATURE   = 20
+    CURRENT               = 22
+    COLOR                 = 24
+    SIMPLE                = 32
+    ANGLE                 = 34
+    ONE_AXIS_GYRO         = 36
+    DISTANCE              = 38
+    DUST                  = 40
+    POSITION              = 42
+    SPEED_KNOT            = 50
+    SIMPLE_ANALOG         = 52
+    DATE                  = 54
+    MAX_INDEX             = 69
+
+db_table_name = 'sensorData'
+db_table_definition = '(id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT, sensor_id INTEGER, sensor_type INTEGER, epoch_time INTEGER, ' \
+    + 'accel_x REAL , accel_x_unit INTEGER, accel_y REAL , accel_y_unit INTEGER, accel_z REAL , accel_z_unit INTEGER, ' \
+    + 'gyro_x REAL , gyro_x_unit INTEGER, gyro_y REAL , gyro_y_unit INTEGER, gyro_z REAL , gyro_z_unit INTEGER, ' \
+    + 'light REAL , light_unit INTEGER , ' \
+    + 'pressure REAL, pressure_unit INTEGER, ' \
+    + 'accel REAL, accel_unit INTEGER, ' \
+    + 'humidity REAL, humidity_unit INTEGER, ' \
+    + 'temperature REAL, temperature_unit INTEGER, ' \
+    + 'current REAL, current_unit INTEGER, ' \
+    + 'color_r REAL , color_r_unit INTEGER, color_g REAL , color_g_unit INTEGER, color_b REAL , color_b_unit INTEGER, rgba INTEGER, rgba_unit INTEGER, ' \
+    + 'simple_digital INTEGER, simple_digital_unit INTEGER, ' \
+    + 'angle REAL, angle_unit INTEGER, ' \
+    + 'gyro REAL, gyro_unit INTEGER, ' \
+    + 'distance REAL, distance_unit INTEGER, ' \
+    + 'dust REAL, dust_unit INTEGER, ' \
+    + 'latitude REAL, latitude_unit INTEGER, longtitude REAL, longtitude_unit INTEGER, altitude REAL, altitude_unit INTEGER, dop , dop_unit INTEGER, ' \
+    + 'speed_knot , speed_knot_unit INTEGER, ' \
+    + 'simple_analog , simple_analog_unit INTEGER, ' \
+    + 'year INTEGER, year_unit INTEGER, month INTEGER, month_unit INTEGER, day INTEGER, day_unit INTEGER, dayOfWeek INTEGER, dayOfWeek_unit INTEGER, ' \
+    + 'hour INTEGER, hour_unit , minute , minute_unit , second , second_unit , miriSecond , miriSecond_unit ' \
+    + ')'
+
+def create_db_table(cur, conn, db_table_name):
+    sql_query = 'CREATE TABLE ' + db_table_name + db_table_definition
+    cur.execute(sql_query)
+    conn.commit()
+
+db_table_entries = '(topic, sensor_id , sensor_type , epoch_time , ' \
+    + 'accel_x  , accel_x_unit , accel_y  , accel_y_unit , accel_z  , accel_z_unit , ' \
+    + 'gyro_x  , gyro_x_unit , gyro_y  , gyro_y_unit , gyro_z  , gyro_z_unit , ' \
+    + 'light  , light_unit  , ' \
+    + 'pressure , pressure_unit , ' \
+    + 'accel , accel_unit , ' \
+    + 'humidity , humidity_unit , ' \
+    + 'temperature , temperature_unit , ' \
+    + 'current , current_unit , ' \
+    + 'color_r  , color_r_unit , color_g  , color_g_unit , color_b  , color_b_unit , rgba , rgba_unit , ' \
+    + 'simple_digital , simple_digital_unit , ' \
+    + 'angle , angle_unit , ' \
+    + 'gyro , gyro_unit , ' \
+    + 'distance , distance_unit , ' \
+    + 'dust , dust_unit , ' \
+    + 'latitude , latitude_unit , longtitude , longtitude_unit , altitude , altitude_unit , dop , dop_unit , ' \
+    + 'speed_knot, speed_knot_unit , ' \
+    + 'simple_analog , simple_analog_unit , ' \
+    + 'year , year_unit , month , month_unit , day , day_unit , dayOfWeek , dayOfWeek_unit , ' \
+    + 'hour , hour_unit , minute , minute_unit , second, second_unit , miriSecond , miriSecond_unit ' \
+    + ')'
+
+numOfEntries = 74
+
+def loadHelp(helpFile):
+    global help
+    try:
+        with open(helpFile, mode='r', encoding='utf-8') as f:
+            help = yaml.safe_load(f)
+    except Exception as e:
+        return "Exception occurred while loading custom platform definition YAML file..."
+    return ""
+
+def icon_clicked(e):
+    global helpPageName
+    p = subPage(
+        controls=[
+            ft.Markdown(
+                help[helpPageName],
+                selectable=True,
+                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            )
+        ],
+        page_props={"window_width":800},
+    )
+    p.start()
+
+def errorWindow(page: ft.Page):
+    global error
+    page.title = "Error"
+    page.window_width = 400
+    page.window_height = 500
+    page.autoscroll = True
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    page.add(
+        ft.AppBar(title=ft.Text("Error"),
+        bgcolor=ft.colors.RED),
+    )
+    page.add(
+        ft.Text(error)
+    )
+    page.add(
+        ft.Divider(height=2, color="black")
+    )
+    page.add(finish_button)
+
+
+
+mqtt_broker = ''
+mqtt_port = 0
+mqtt_topic = ''
+mqtt_auth = False
+mqtt_auth_str = ''
+mqtt_user = ''
+mqtt_pass = ''
+outputTarget = 0
+output_file_name = ''
+output_database_name = ''
+outputFile_rst = False
+
+def mainWindow(page: ft.Page):
+    def createView1():
+        global helpPageName, mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str
+        def checkTrueFalse(val):
+            if val == "TRUE" or val=="True" or val == "true" or val == "yes" or val == "Yes" or val == "YES":
+                return True
+            return False
+        def next_button_clicked(e):
+            global mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str
+            mqtt_broker = serverAddress.value
+            mqtt_port = mqttPort.value
+            mqtt_topic = mqttTopic.value
+            if mqtt_auth_str == '' or str(mqtt_broker) == '' or str(mqtt_port) == '' or str(mqtt_topic) == '':
+                msg.value = "Please input mqtt parameter."
+                msg.update()
+            else:
+                page.go("/view2")
+        def dropdown_changed(e):
+            global mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str
+            #print("changed.")
+            mqtt_auth = checkTrueFalse(mqttAuth.value)
+            mqtt_auth_str = 'done'
+        page.window_width = 500
+        page.window_height = 700
+        serverAddress = ft.TextField(label="IP address or FQDN")
+        if mqtt_broker != '':
+            serverAddress.value = mqtt_broker
+        mqttPort = ft.TextField(label="MQTT port number")
+        if mqtt_port != 0:
+            mqttPort.value = mqtt_port
+        mqttTopic = ft.TextField(label="MQTT topic")
+        if mqtt_topic != '':
+            mqttTopic.value = mqtt_topic
+        mqttAuth = ft.Dropdown(
+            width=250,
+            on_change=dropdown_changed,
+            options=[
+                ft.dropdown.Option(key=True, text="Yes"),
+                ft.dropdown.Option(key=False, text="No"),
+            ],
+            label = "Use authentication"
+        )
+        if mqtt_auth_str != '':
+            mqttAuth.value = mqtt_auth
+        msg = ft.Text()
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        helpPageName = 'mqttGeneral'
+        return ft.View("/view1", [
+            ft.AppBar(
+                title=ft.Text("MQTT設定"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            ft.Text("MQTTブローカアドレス", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            serverAddress,
+            ft.Divider(height=2, color="black"),
+            ft.Text("MQTTブローカポート番号", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            mqttPort,
+            ft.Divider(height=2, color="black"),
+            ft.Text("MQTTトピック", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            mqttTopic,
+            ft.Divider(height=2, color="black"),
+            ft.Text("MQTT認証の使用", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            mqttAuth,
+            ft.Divider(height=2, color="black"),
+            msg,
+            ft.Divider(height=2, color="black"),
+            nextButton
+        ])
+
+    def createView2():
+        global helpPageName, mqtt_user, mqtt_pass
+        def next_button_clicked(e):
+            global mqtt_user, mqtt_pass
+            mqtt_user = userName.value
+            mqtt_pass = userPass.value
+            page.go("/view3")
+        userName = ft.TextField(label="MQTT user name")
+        if mqtt_user != '':
+            userName.value = mqtt_user
+        userPass = ft.TextField(label="MQTT pass phrase")
+        if mqtt_pass != '':
+            userPass.value = mqtt_pass
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        helpPageName = 'mqttAuth'
+        return ft.View("/view2", [
+            ft.AppBar(
+                title=ft.Text("MQTT認証情報"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            ft.Text("MQTTユーザ名", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            userName,
+            ft.Divider(height=2, color="black"),
+            ft.Text("MQTTパスワード", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            userPass,
+            ft.Divider(height=2, color="black"),
+            nextButton
+        ])
+
+    def createView3():
+        global helpPageName, outputTarget
+        def next_button_clicked(e):
+            global outputTarget
+            #print("outputSelection.value = " + str(outputSelection.value))
+            outputTarget = outputSelection.value
+            if (outputTarget == 1) or (outputTarget == '1') or (outputTarget == 2) or (outputTarget == '2'):
+                page.go("/view4")
+            else:
+                msg.value = "please select target media."
+                msg.update()
+        outputSelection = ft.Dropdown(
+            width=200,
+            options=[
+                ft.dropdown.Option(key = 1, text = "File"),
+                ft.dropdown.Option(key = 2, text = "DataBase"),
+            ],
+            label = "出力先"
+        )
+        if (outputTarget == 1) or (outputTarget == '1'):
+            outputSelection.value = 1
+        if (outputTarget == 2) or (outputTarget == '2'):
+            outputSelection.value = 2
+        msg = ft.Text()
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        helpPageName = 'outputSelection'
+        return ft.View("/view3", [
+            ft.AppBar(
+                title=ft.Text("データ出力先選択"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            outputSelection,
+            msg,
+            ft.Divider(height=2, color="black"),
+            nextButton
+        ])
+
+    def createView4():
+        global helpPageName, output_file_name
+        def pick_output_file_result(e: ft.FilePickerResultEvent):
+            global output_file_name
+            selected_output_file.value = e.path
+            output_file_name = selected_output_file.value
+            selected_output_file.update()
+        def next_button_clicked(e):
+            page.go("/view6")
+        pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
+        selected_output_file = ft.Text()
+        if output_file_name != '':
+            selected_output_file.value = output_file_name
+        page.overlay.append(pick_output_file_dialog)
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        helpPageName = 'selectOutputFile'
+        return ft.View("/view4", [
+            ft.AppBar(
+                title=ft.Text("出力ファイル選択"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            ft.Text("MQTTデータ出力ファイル", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            ft.ElevatedButton(
+                "output file",
+                icon=ft.icons.UPLOAD_FILE,
+                on_click=lambda _: pick_output_file_dialog.save_file(),
+                ),
+            selected_output_file,
+            ft.Divider(height=2, color="black"),
+            nextButton
+        ])
+
+    def createView5():
+        global helpPageName, output_database_name
+        def pick_output_db_result(e: ft.FilePickerResultEvent):
+            global output_database_name
+            selected_output_db.value = e.path
+            output_database_name = selected_output_db.value
+            selected_output_db.update()
+        def next_button_clicked(e):
+            page.go("/view6")
+        pick_output_db_dialog = ft.FilePicker(on_result=pick_output_db_result)
+        selected_output_db = ft.Text()
+        if output_database_name != '':
+            selected_output_db.value = output_database_name
+        page.overlay.append(pick_output_db_dialog)
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        helpPageName = 'selectOutputDB'
+        return ft.View("/view5", [
+            ft.AppBar(
+                title=ft.Text("出力データベース選択"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            ft.Text("MQTTデータ出力データベース", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            ft.ElevatedButton(
+                "output data base file",
+                icon=ft.icons.UPLOAD_FILE,
+                on_click=lambda _: pick_output_db_dialog.save_file(),
+                ),
+            selected_output_db,
+            ft.Divider(height=2, color="black"),
+            nextButton
+        ])
+
+    def createView6():
+        global helpPageName, mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_user, mqtt_pass, outputTarget, output_file_name, output_db_name
+        def exec_button_clicked(e):
+            page.go("/view7")
+        def back_button_clicked(e):
+            page.go("/view1")
+        page.window_height = 900
+        execButton = ft.ElevatedButton(text="Exec", on_click=exec_button_clicked)
+        backButton = ft.ElevatedButton(text="Back", on_click=back_button_clicked)
+        if mqtt_auth:
+            useAuth = "YES"
+        else:
+            useAuth = "NO"
+        if outputTarget == 1 :
+            targetMedia="File"
+            fileName=output_file_name
+        elif outputTarget == 2 :
+            targetMedia="DataBase"
+            fileName=output_database_name
+        elif outputTarget == '1':
+            targetMedia="File"
+            fileName=output_file_name
+        elif outputTarget == '2' :
+            targetMedia="DataBase"
+            fileName=output_database_name
+        else:
+            targetMedia="None"
+            fileName="not defined"
+        helpPageName = 'summary'
+        return ft.View("/view6", [
+            ft.AppBar(
+                title=ft.Text("全設定内容"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            ft.Text("MQTTブローカアドレス", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            ft.Text(mqtt_broker),
+            ft.Divider(height=2, color="black"),
+            ft.Text("MQTTブローカポート番号", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            ft.Text(mqtt_port),
+            ft.Divider(height=2, color="black"),
+            ft.Text("MQTTトピック", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            ft.Text(mqtt_topic),
+            ft.Divider(height=2, color="black"),
+            ft.Text("MQTT認証", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            ft.Text(useAuth),
+            ft.Divider(height=2, color="black"),
+            ft.Text("MQTTユーザ名", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            ft.Text(mqtt_user),
+            ft.Divider(height=2, color="black"),
+            ft.Text("MQTTパスフレーズ", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            ft.Text(mqtt_pass),
+            ft.Divider(height=2, color="black"),
+            ft.Text("データ出力メディア", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            ft.Text(targetMedia),
+            ft.Divider(height=2, color="black"),
+            ft.Text("データ出力先", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            ft.Text(fileName),
+            ft.Divider(height=2, color="black"),
+            execButton,
+            backButton
+        ])
+
+    def createView7():
+        global helpPageName, mqtt_broker, mqtt_port, mqtt_topic, timeout, mqtt_auth, mqtt_user, mqtt_pass, outputTarget, output_file_name, output_db_name, outputFile, outputFile_rst, cur, conn
+        def on_connect(client, userdata, flag, result, properties):
+            global mqtt_topic
+            client.subscribe(mqtt_topic)
+
+        def on_disconnect(client, userdata, flags , result, properties):
+            if  result != 0:
+                print("mqtt connection ends.")
+
+        def on_message(client, userdata, msg):
+            message = msg.payload.decode()
+            json_data = json.loads(message)
+            dataStr = output_data(msg.topic, json_data)
+            sensorMsg.value = dataStr
+            page.update()
+
+        def printout_sensor_data(topic, id, type, date, sensor_data):
+            global outputFile_rst, outputFile
+            outputString = topic + " , " + str(id) + " , " + str(type) + " , " + str(date)
+            for i in range(SensorTypeIndex.MAX_INDEX.value+1):
+                outputString = outputString + " , " + str(sensor_data[i])
+            if outputFile_rst:
+                outputFile.write(outputString+"\n")
+                outputFile.flush()
+                print(outputString)
+            return outputString
+
+        def insert_data_to_db(topic, id, type, date, sensor_data):
+            global cur,conn, db_table_name, db_table_entries, output_database_name
+            outputString = topic + " , " + str(id) + " , " + str(type) + " , " + str(date)
+            for i in range(SensorTypeIndex.MAX_INDEX.value+1):
+                outputString = outputString + " , " + str(sensor_data[i])
+            qmarks = ' values('
+            for i in range(numOfEntries):
+                qmarks = qmarks + '?'
+                if (numOfEntries-1) != i:
+                    qmarks = qmarks + ', '
+            qmarks = qmarks + ');'
+            sql_query = 'INSERT INTO ' + db_table_name + db_table_entries + qmarks
+            dataTuple = (topic, id, type, date)
+            dataTuple = dataTuple + tuple(sensor_data)
+            try:
+                conn = sqlite3.connect(output_database_name)
+                cur = conn.cursor()
+            except sqlite3.Error as error:
+                return 'Error : can not open database file.'
+            finally:
+                cur.execute(sql_query, dataTuple)
+                conn.commit()
+                cur.close()
+                conn.close()
+                return outputString
+
+        def check_int_entry(num):
+            entry=[1,2,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63,65,6,67,68,69,70,71,72,73]
+            for i in range(len(entry)):
+                if entry[i] == num:
+                    return True
+                else:
+                    return False
+
+        def output_data(topic, data):
+            global outputTarget
+            sensor_id = data['id']
+            sensor_type = data['type']
+            sensing_date = data['time']
+            sensor_data = []
+            for i in range(SensorTypeIndex.MAX_INDEX.value+1):
+                sensor_data = sensor_data + [0]
+            if sensor_type == SensorType.ACCELEROMETER.value:
+                sensor_data[SensorTypeIndex.ACCELEROMETER.value] = data['data'][0]['x']
+                sensor_data[SensorTypeIndex.ACCELEROMETER.value+1] = data['data'][0]['unit']
+                sensor_data[SensorTypeIndex.ACCELEROMETER.value+2] = data['data'][1]['y']
+                sensor_data[SensorTypeIndex.ACCELEROMETER.value+3] = data['data'][1]['unit']
+                sensor_data[SensorTypeIndex.ACCELEROMETER.value+4] = data['data'][2]['z']
+                sensor_data[SensorTypeIndex.ACCELEROMETER.value+5] = data['data'][2]['unit']
+            elif sensor_type == SensorType.GYROSCOPE.value:
+                sensor_data[SensorTypeIndex.GYROSCOPE.value] = data['data'][0]['x']
+                sensor_data[SensorTypeIndex.GYROSCOPE.value+1] = data['data'][0]['unit']
+                sensor_data[SensorTypeIndex.GYROSCOPE.value+2] = data['data'][1]['y']
+                sensor_data[SensorTypeIndex.GYROSCOPE.value+3] = data['data'][1]['unit']
+                sensor_data[SensorTypeIndex.GYROSCOPE.value+4] = data['data'][2]['z']
+                sensor_data[SensorTypeIndex.GYROSCOPE.value+5] = data['data'][2]['unit']
+            elif sensor_type == SensorType.LIGHT.value:
+                sensor_data[SensorTypeIndex.LIGHT.value] = data['data'][0]['light']
+                sensor_data[SensorTypeIndex.LIGHT.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.PRESSURE.value:
+                sensor_data[SensorTypeIndex.PRESSURE.value] = data['data'][0]['air_pressure']
+                sensor_data[SensorTypeIndex.PRESSURE.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.LINEAR_ACCELERATION.value:
+                sensor_data[SensorTypeIndex.LINEAR_ACCELERATION.value] = data['data'][0]['x']
+                sensor_data[SensorTypeIndex.LINEAR_ACCELERATION.value+1] = data['data'][0]['unit']
+                sensor_data[SensorTypeIndex.LINEAR_ACCELERATION.value+2] = data['data'][1]['y']
+                sensor_data[SensorTypeIndex.LINEAR_ACCELERATION.value+3] = data['data'][1]['unit']
+                sensor_data[SensorTypeIndex.LINEAR_ACCELERATION.value+4] = data['data'][2]['z']
+                sensor_data[SensorTypeIndex.LINEAR_ACCELERATION.value+5] = data['data'][2]['unit']
+            elif sensor_type == SensorType.RELATIVE_HUMIDITY.value:
+                sensor_data[SensorTypeIndex.RELATIVE_HUMIDITY.value] = data['data'][0]['humidity']
+                sensor_data[SensorTypeIndex.RELATIVE_HUMIDITY.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.AMBIENT_TEMPERATURE.value:
+                sensor_data[SensorTypeIndex.AMBIENT_TEMPERATURE.value] = data['data'][0]['temperature']
+                sensor_data[SensorTypeIndex.AMBIENT_TEMPERATURE.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.CURRENT.value:
+                sensor_data[SensorTypeIndex.CURRENT.value] = data['data'][0]['current']
+                sensor_data[SensorTypeIndex.CURRENT.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.COLOR.value:
+                sensor_data[SensorTypeIndex.COLOR.value] = data['data'][0]['r']
+                sensor_data[SensorTypeIndex.COLOR.value+1] = data['data'][0]['unit']
+                sensor_data[SensorTypeIndex.COLOR.value+2] = data['data'][1]['g']
+                sensor_data[SensorTypeIndex.COLOR.value+3] = data['data'][1]['unit']
+                sensor_data[SensorTypeIndex.COLOR.value+4] = data['data'][2]['b']
+                sensor_data[SensorTypeIndex.COLOR.value+5] = data['data'][2]['unit']
+                sensor_data[SensorTypeIndex.COLOR.value+6] = data['data'][3]['rgba']
+                sensor_data[SensorTypeIndex.COLOR.value+7] = data['data'][3]['unit']
+            elif sensor_type == SensorType.SIMPLE.value:
+                sensor_data[SensorTypeIndex.SIMPLE.value] = data['data'][0]['value']
+                sensor_data[SensorTypeIndex.SIMPLE.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.ANGLE.value:
+                sensor_data[SensorTypeIndex.ANGLE.value] = data['data'][0]['angle']
+                sensor_data[SensorTypeIndex.ANGLE.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.ONE_AXIS_GYRO.value:
+                sensor_data[SensorTypeIndex.ONE_AXIS_GYRO.value] = data['data'][0]['roll']
+                sensor_data[SensorTypeIndex.ONE_AXIS_GYRO.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.DISTANCE.value:
+                sensor_data[SensorTypeIndex.DISTANCE.value] = data['data'][0]['distance']
+                sensor_data[SensorTypeIndex.DISTANCE.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.DUST.value:
+                sensor_data[SensorTypeIndex.DUST.value] = data['data'][0]['dust']
+                sensor_data[SensorTypeIndex.DUST.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.POSITION.value:
+                sensor_data[SensorTypeIndex.POSITION.value] = data['data'][0]['latitude']
+                sensor_data[SensorTypeIndex.POSITION.value+1] = data['data'][0]['unit']
+                sensor_data[SensorTypeIndex.POSITION.value+2] = data['data'][1]['longtitude']
+                sensor_data[SensorTypeIndex.POSITION.value+3] = data['data'][1]['unit']
+                sensor_data[SensorTypeIndex.POSITION.value+4] = data['data'][2]['altitude']
+                sensor_data[SensorTypeIndex.POSITION.value+5] = data['data'][2]['unit']
+                sensor_data[SensorTypeIndex.POSITION.value+6] = data['data'][3]['dop']
+                sensor_data[SensorTypeIndex.POSITION.value+7] = data['data'][3]['unit']
+            elif sensor_type == SensorType.SPEED_KNOT.value:
+                sensor_data[SensorTypeIndex.SPEED_KNOT.value] = data['data'][0]['speed_knot']
+                sensor_data[SensorTypeIndex.SPEED_KNOT.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.SIMPLE_ANALOG.value:
+                sensor_data[SensorTypeIndex.SIMPLE_ANALOG.value] = data['data'][0]['value']
+                sensor_data[SensorTypeIndex.SIMPLE_ANALOG.value+1] = data['data'][0]['unit']
+            elif sensor_type == SensorType.DATE.value:
+                sensor_data[SensorTypeIndex.DATE.value] = data['data'][0]['year']
+                sensor_data[SensorTypeIndex.DATE.value+1] = data['data'][0]['unit']
+                sensor_data[SensorTypeIndex.DATE.value+2] = data['data'][1]['month']
+                sensor_data[SensorTypeIndex.DATE.value+3] = data['data'][1]['unit']
+                sensor_data[SensorTypeIndex.DATE.value+4] = data['data'][2]['day']
+                sensor_data[SensorTypeIndex.DATE.value+5] = data['data'][2]['unit']
+                sensor_data[SensorTypeIndex.DATE.value+6] = data['data'][3]['dayOfWeek']
+                sensor_data[SensorTypeIndex.DATE.value+7] = data['data'][3]['unit']
+                sensor_data[SensorTypeIndex.DATE.value+8] = data['data'][4]['hour']
+                sensor_data[SensorTypeIndex.DATE.value+9] = data['data'][4]['unit']
+                sensor_data[SensorTypeIndex.DATE.value+10] = data['data'][5]['minute']
+                sensor_data[SensorTypeIndex.DATE.value+11] = data['data'][5]['unit']
+                sensor_data[SensorTypeIndex.DATE.value+12] = data['data'][6]['second']
+                sensor_data[SensorTypeIndex.DATE.value+13] = data['data'][6]['unit']
+                sensor_data[SensorTypeIndex.DATE.value+14] = data['data'][7]['millisecond']
+                sensor_data[SensorTypeIndex.DATE.value+15] = data['data'][7]['unit']
+            else:
+                return
+            if str(outputTarget)=='1':
+                return printout_sensor_data(topic, sensor_id,sensor_type,sensing_date,sensor_data)
+            elif str(outputTarget)=='2':
+                return insert_data_to_db(topic, sensor_id,sensor_type,sensing_date,sensor_data)
+            
+
+        def printout_sensor_data_header():
+            global outputFile
+            outputString = "topic , id , type , date , "
+            outputString = outputString + "accel_x , unit , accel_y , unit , accel_z , unit , "
+            outputString = outputString + "gyro_x , unit , gyro_y , unit , gyro_z , unit , "
+            outputString = outputString + "light , unit , "
+            outputString = outputString + "pressure , unit , "
+            outputString = outputString + "accel , unit , "
+            outputString = outputString + "humidity , unit , "
+            outputString = outputString + "temperature , unit , "
+            outputString = outputString + "current , unit , "
+            outputString = outputString + "color_r , unit , color_g , unit , color_b , unit , color_rgba , unit , "
+            outputString = outputString + "simple_digital , unit , "
+            outputString = outputString + "angle , unit , "
+            outputString = outputString + "gyro , unit , "
+            outputString = outputString + "distance , unit , "
+            outputString = outputString + "dust , unit , "
+            outputString = outputString + "latitude , unit , longitude , unit , altitude , unit , dop , unit , "
+            outputString = outputString + "speed_knot , unit , "
+            outputString = outputString + "simple_analog , unit , "
+            outputString = outputString + "year , unit , month , unit , day , unit , dayOfWeek , unit , hour , unit , minute , unit , second , unit , miriSecond , unit"
+            outputString = outputString + "\n"
+            try:
+                outputFile.write(outputString)
+            except:
+                print('write error')
+
+        def create_db_table(cur, conn, db_table_name):
+            global db_table_definition
+            sql_query = 'CREATE TABLE ' + db_table_name + db_table_definition
+            cur.execute(sql_query)
+            conn.commit()
+
+        def open_db(db_file_name):
+            global cur, conn
+            #print(db_file_name)
+            db_flag=False
+            try:
+                conn = sqlite3.connect(db_file_name)
+                cur = conn.cursor()
+                table_list_query = "SELECT name FROM sqlite_master WHERE type='table';"
+                cur.execute(table_list_query)
+                tables = cur.fetchall()
+            except sqlite3.Error as error:
+                return False
+            finally:
+                for table in tables:
+                    if table[0] == db_table_name:
+                        db_flag=True
+                if not db_flag:
+                    create_db_table(cur, conn, db_table_name)
+                cur.close()
+                conn.close()
+                return True
+
+        client = mqtt_client.Client(apiVersion)
+        client.on_connect = on_connect
+        client.on_disconnect = on_disconnect
+        client.on_message = on_message
+        if mqtt_auth:
+            client.username = mqtt_user
+            client.password = mqtt_pass
+        client.connect(mqtt_broker, int(mqtt_port), timeout)
+        client.loop_start()
+        sensorMsg = ft.Text()
+        fileOpenResult = False
+        if str(outputTarget)=='1':
+            try:
+                outputFile = open(output_file_name, mode='w')
+                outputFile_rst = True
+                printout_sensor_data_header()
+            except:
+                sensorMsg.value = "output file open failure."
+        elif str(outputTarget)=='2':
+            outputFile_rst = open_db(output_database_name)
+            if not outputFile_rst:
+                sensorMsg.value = "output database file open failure."
+        helpPageName = 'execution'
+        return ft.View("/view7", [
+            ft.AppBar(
+                title=ft.Text("MQTT受信"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            sensorMsg,
+            ft.Divider(height=2, color="black"),
+            ft.ElevatedButton(
+                "Close", on_click=lambda _: page.window_destroy()),
+        ])
+
+    def route_change(handler):
+        troute = ft.TemplateRoute(handler.route)
+        page.views.clear()
+        if troute.match("/view1"):
+            page.views.append(createView1())
+        elif troute.match("/view2"):
+            #print("mqtt_auth_str = " + mqtt_auth_str)
+            #print("mqtt_auth = "+ str(mqtt_auth))
+            if mqtt_auth_str == 'done' and str(mqtt_auth) == "False":
+                page.go("/view3")
+            else:
+                page.views.append(createView2())
+        elif troute.match("/view3"):
+            page.views.append(createView3())
+        elif troute.match("/view4"):
+            if (outputTarget == 2) or (outputTarget == '2'):
+                page.go("/view5")
+            else:
+                page.views.append(createView4())
+        elif troute.match("/view5"):
+            page.views.append(createView5())
+        elif troute.match("/view6"):
+            page.views.append(createView6())
+        elif troute.match("/view7"):
+            page.views.append(createView7())
+    page.on_route_change = route_change
+    page.title = "Mqtt listner"
+    page.go("/view1")
+
+if __name__ == '__main__':
+    # sample parameter
+    # mqtt_broker = '10.116.63.186'
+    # mqtt_port = 1883
+    # mqtt_topic = 'arduino/echo'
+    error = loadHelp(help_file)
+    if error != "":
+        ft.app(target=errorWindow)
+    else:
+        ft.app(target=mainWindow)
+    if str(outputTarget)=='1':
+        outputFile.close()
+
+
+# In[ ]:
+
+
+
+
