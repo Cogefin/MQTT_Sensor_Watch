@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[4]:
+# In[1]:
 
 
 #!/usr/bin/env python
@@ -215,13 +215,13 @@ def fileWindow(page: ft.Page):
         page.window_destroy()
 
     appBar = ft.AppBar(
-        title=ft.Text("センサデータデータベースからCSVへのエクスポート"),
+        title=ft.Text("センサデータCSVファイルのSQLiteへのエクスポート"),
         bgcolor=ft.colors.BLUE,
         actions=[
             ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
         ]
     )
-    subtitle1 = ft.Text("sqlite database file selection.", style=ft.TextThemeStyle.TITLE_MEDIUM)
+    subtitle1 = ft.Text("CSV file selection.", style=ft.TextThemeStyle.TITLE_MEDIUM)
     pick_input_file_dialog = ft.FilePicker(on_result=pick_input_file_result)
     input_file_button = ft.ElevatedButton(
         "CSV file",

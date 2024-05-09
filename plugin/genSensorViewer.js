@@ -182,11 +182,28 @@ function drawChart() {
         var correlationVal = ss.sampleCorrelation(correlationData[i][0], correlationData[i][1]).toFixed(numOfDigits);
         label = 'correlation' + i.toString();
         document.getElementById(label).innerHTML = correlationVal;
+        tmpArray = mergeArray(correlationData[i][0], correlationData[i][1]);
+        const mb = ss.linearRegression(tmpArray)
+        label = 'coefficient' + i.toString();
+        document.getElementById(label).innerHTML = mb.m.toFixed(numOfDigits);
+        label = 'constant' + i.toString();
+        document.getElementById(label).innerHTML = mb.b.toFixed(numOfDigits);
     }
     /*
      * 異常値などの警告事項のチェック
      */
     checkError();
+}
+
+/*
+ * 線形回帰の計算用の配列合成
+ */
+function mergeArray(x, y) {
+    rst = []
+    for (var i=0; i< x.length;i++) {
+        rst.push([x[i],y[i]])
+    }
+    return rst
 }
 
 /*

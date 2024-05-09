@@ -1,0 +1,969 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[2]:
+
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from flet_multi_page import subPage
+import flet as ft
+import yaml
+import time
+import re
+import csv
+
+help_file="Help/dataFilter.yaml"
+
+
+sensorTypeNumber = {
+    'ACCELEROMETER'         : 1 ,
+    'GYROSCOPE'             : 4 ,
+    'LIGHT'                 : 5 ,
+    'PRESSURE'              : 6 ,
+    'LINEAR_ACCELERATION'   : 9 ,
+    'RELATIVE_HUMIDITY'     : 11 ,
+    'AMBIENT_TEMPERATURE'   : 12 ,
+    'CURRENT'               : 14 ,
+    'COLOR'                 : 15 ,
+    'SIMPLE'                : 16 ,
+    'ANGLE'                 : 17 ,
+    'ONE_AXIS_GYRO'         : 18 ,
+    'DISTANCE'              : 19 ,
+    'DUST'                  : 21 ,
+    'POSITION'              : 23 ,
+    'SPEED_KNOT'            : 25 ,
+    'SIMPLE_ANALOG'         : 26
+}
+
+sensorTypeText = {
+    'ACCELEROMETER'         : '3軸加速度' ,
+    'GYROSCOPE'             : '3軸ジャイロ' ,
+    'LIGHT'                 : '光センサ' ,
+    'PRESSURE'              : '気圧センサ' ,
+    'LINEAR_ACCELERATION'   : '1軸リニア加速度' ,
+    'RELATIVE_HUMIDITY'     : '湿度' ,
+    'AMBIENT_TEMPERATURE'   : '気温' ,
+    'CURRENT'               : '電流' ,
+    'COLOR'                 : '色彩' ,
+    'SIMPLE'                : '単純デジタルセンサ' ,
+    'ANGLE'                 : '角度' ,
+    'ONE_AXIS_GYRO'         : '1軸ジャイロ' ,
+    'DISTANCE'              : '距離' ,
+    'DUST'                  : 'ホコリセンサ' ,
+    'POSITION'              : '位置センサ' ,
+    'SPEED_KNOT'            : '速度(ノット)' ,
+    'SIMPLE_ANALOG'         : '単純アナログセンサ'
+}
+
+sensorTypeName = [
+    'ACCELEROMETER',
+    'GYROSCOPE',
+    'LIGHT',
+    'PRESSURE',
+    'LINEAR_ACCELERATION',
+    'RELATIVE_HUMIDITY',
+    'AMBIENT_TEMPERATURE',
+    'CURRENT',
+    'COLOR',
+    'SIMPLE',
+    'ANGLE',
+    'ONE_AXIS_GYRO',
+    'DISTANCE',
+    'DUST',
+    'POSITION',
+    'SPEED_KNOT',
+    'SIMPLE_ANALOG'
+]
+
+def loadHelp(helpFile):
+    global help
+    try:
+        with open(helpFile, mode='r', encoding='utf-8') as f:
+            help = yaml.safe_load(f)
+    except Exception as e:
+        return "Exception occurred while loading custom platform definition YAML file..."
+    return ""
+
+def help_icon_clicked(e):
+    global helpPageName
+    p = subPage(
+        controls=[
+            ft.Markdown(
+                help[helpPageName],
+                selectable=True,
+                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            )
+        ],
+        page_props={"window_width":800},
+    )
+    p.start()
+
+def errorWindow(page: ft.Page):
+    global error
+    page.title = "Error"
+    page.window_width = 400
+    page.window_height = 500
+    page.autoscroll = True
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    page.add(
+        ft.AppBar(title=ft.Text("Error"),bgcolor=ft.colors.RED),
+        ft.Text(error),
+        ft.Divider(height=2, color="black"),
+        finish_button
+    )
+
+def checkTargetFields():
+    global targetTopic, targetSensorID, targetSensorType
+    flag = False
+    val = ''
+    for i in  range(len(targetSensorID)):
+        pattern = '^[-]?[0-9]+$'
+        if None==re.match(pattern,targetSensorID[i].value):
+            val = '監視対象'+str(i+1)+'のセンサIDに数字を入力してください．'
+            flag=True
+    for i in  range(len(targetSensorType)):
+        if None==targetSensorType[i].value:
+            val = '監視対象'+str(i+1)+'のセンサタイプを選択してください．'
+            flag=True
+    for i in  range(len(targetTopic)):
+        if ''==targetTopic[i].value:
+            val = '監視対象'+str(i+1)+'のトピックを入力してください．'
+            flag=True
+    return (flag, val)
+
+def readSensorCSV(name):
+    global sensorDataType
+    try:
+        with open(name) as f:
+            reader = csv.reader(f)
+            l = [row for row in reader]
+    except Exception as e:
+        return (True , l)
+    l.pop(0)
+    #print(l)
+    data = []
+    for i in range(len(l)):
+        oneData = []
+        for j in range(len(l[i])):
+            if j==0:
+                topicStr = removeWhiteSpace(l[i][j])
+                oneData.append(topicStr)
+            elif (0< j==1) and (j<4):
+                val = int(removeWhiteSpace(l[i][j]))
+                oneData.append(val)
+            else:
+                oneData.append(removeWhiteSpace(l[i][j]))
+        data.append(oneData)
+    #print(data)
+    return (False , data)
+
+def readSensorData(name):
+    global error, sensorData
+    (flag, sensorData) = readSensorCSV(name)
+    if flag:
+        return (True, 'Error occured while opening sensor data file.')
+    else:
+        return (False, '')
+
+def openOutputFile(name):
+    global outputFile
+    try:
+        outputFile = open(name,  mode='w')
+    except Exception as e:
+        return (True, 'Error occured while opening output csv file.')
+    printout_sensor_data_header()
+    return (False, '')
+
+def printout_sensor_data_header():
+    global outputFile
+    outputString = "topic , id , type , date , "
+    outputString = outputString + "accel_x , unit , accel_y , unit , accel_z , unit , "
+    outputString = outputString + "gyro_x , unit , gyro_y , unit , gyro_z , unit , "
+    outputString = outputString + "light , unit , "
+    outputString = outputString + "pressure , unit , "
+    outputString = outputString + "accel , unit , "
+    outputString = outputString + "humidity , unit , "
+    outputString = outputString + "temperature , unit , "
+    outputString = outputString + "current , unit , "
+    outputString = outputString + "color_r , unit , color_g , unit , color_b , unit , color_rgba , unit , "
+    outputString = outputString + "simple_digital , unit , "
+    outputString = outputString + "angle , unit , "
+    outputString = outputString + "gyro , unit , "
+    outputString = outputString + "distance , unit , "
+    outputString = outputString + "dust , unit , "
+    outputString = outputString + "latitude , unit , longitude , unit , altitude , unit , dop , unit , "
+    outputString = outputString + "speed_knot , unit , "
+    outputString = outputString + "simple_analog , unit , "
+    outputString = outputString + "year , unit , month , unit , day , unit , dayOfWeek , unit , hour , unit , minute , unit , second , unit , miriSecond , unit"
+    outputString = outputString + "\n"
+    try:
+        outputFile.write(outputString)
+    except:
+        return 'Error occured while writing data header to output csv file.'
+    return ''
+
+def removeWhiteSpace(stringData):
+    stringData = re.sub(r"[\u3000 \s]", "", stringData)
+    return stringData
+
+def convTargets():
+    global targetTopic, targetSensorID, targetSensorType, topic, sensorID, sensorType, sensorTypeNumber
+    for i in range(len(targetTopic)):
+        topic.append(removeWhiteSpace(targetTopic[i].value))
+        sensorID.append(int(removeWhiteSpace(targetSensorID[i].value)))
+        #sensorType.append(int(targetSensorType[i].value))
+        sensorType.append(sensorTypeNumber[targetSensorType[i].value])
+    #print(topic)
+    #print(sensorID)
+    #print(sensorType)
+
+def outputData(data):
+    for i in range(len(data)):
+        if i==0:
+            dataStr = data[i]
+        else:
+            dataStr = dataStr + ' , ' + str(data[i])
+    dataStr = dataStr + '\n'
+    try:
+        outputFile.write(dataStr)
+    except:
+        return True
+    return False
+
+#def matchTargets(data):
+#    global topic, sensorID, sensorType
+#    for i in range(len(topic)):
+#        if topic[i] != data[0]:
+#            return False
+#        if sensorType[i] != data[2]:
+#            return False
+#        if (sensorID[i] != -1) and (sensorID[i] != data[1]):
+#            return False
+#    return True
+def matchTargets(dataArray):
+    global topic, sensorID, sensorType
+    result = []
+    for data in range(len(dataArray)):
+        for i in range(len(topic)):
+            if (topic[i] == data[0]) and (sensorType[i] == data[2]):
+                if (sensorID[i] == -1) or (sensorID[i] == data[1]):
+                    data.inseret(0,i)
+                    result.append(data)
+    return result
+
+#def matchTime(dataArray):
+#    global interval, startTime
+#    return dataArray
+
+def incTimeStandard(startTime, interval, limit, currentTime):
+    diff = currentTime-(startTime+limit)
+    t = math.floor(diff/interval)
+    startTime = t*interval+startTime
+    lastTime = startTime + limit
+    return (startTime, lastTime)
+
+def checkBufferFull(buff):
+    for i in range(len(buff)):
+        if buff[i] == []:
+            return False
+    return True
+
+def matchTime(dataArray):
+    global interval, startTime, limit, sensorID
+    result = []
+    if startTime == 0:
+        localStartTime = dataArray[0][4]
+    else:
+        localStartTime = startTime
+    limitTime = localStartTime + limit
+    numOfTarget = len(sensorID)
+    result = []
+    buffer = []
+    for i in range(numOfTarget):
+        buffer.append([])
+    for i in range(len(dataArray)):
+        if dataArray[i][4] >= limitTime:
+            if checkBufferFull(buffer):
+                for j in range(len(buffer)):
+                    result.append(buffer[j])
+                buffer.clear()
+                for j in range(numOfTarget):
+                    buffer.append([])
+            (localStartTime, limitTime) = incTimeStandard(localStartTime, interval , limit , dataArray[i][4]) 
+        elif ((limitTime > dataArray[i][4]) and (dataArray[i][4] >= localStartTime)):
+            data = dataArray[i]
+            index = data.pop(0)
+            if buffer[index] == []:
+                data[3] = localStartTime
+                buffer[index] = data
+        else:
+            localStartTime += interval
+            limitTime = localStartTime + limit
+    if checkBufferFull(buffer):
+        for j in range(len(buffer)):
+            result.append(buffer[j])
+    return result
+
+def dataFilter():
+    global sensorData
+    #matchedData=[]
+    #filterData=[]
+    #for i in range(len(sensorData)):
+    #    if matchTargets(sensorData[i]):
+    #        matchedData.append(sensorData[i])
+    matchedData = matchTargets(sensorData)
+    print(matchedData)
+    print('**********************************************')
+    filterData = matchTime(matchedData)
+    print(filterData)
+    print('**********************************************')
+    for i in range(len(filterData)):
+        if outputData(filterData[i]):
+            return (True, 'Can not write data to output file.')
+    return (False, '')
+
+def processData():
+    global error, data_file_name, output_file_name, outputFile
+    convTargets()
+    (flag, error) = readSensorData(data_file_name)
+    if flag:
+        return (True, error)
+    (flag, error) = openOutputFile(output_file_name)
+    if flag:
+        outputFile.close()
+        return (True, error)
+    (flag, error) = dataFilter()
+    outputFile.close()
+    return (flag, error)
+
+data_file_name = ''
+output_file_name = ''
+interval = 1
+startTime = 0
+limit = 0
+#sensors = []
+targetTopic = []
+targetSensorID = []
+targetSensorType = []
+topic = []
+sensorID = []
+sensorType = []
+
+def mainWindow(page: ft.Page):
+    def createView10():
+        global helpPageName, data_file_name, output_file_name
+        def checkFields():
+            global data_file_name, output_file_name
+            if data_file_name == '':
+                return (True, 'データファイルを指定してください．')
+            if output_file_name== '':
+                return (True, 'データファイルを指定してください．')
+            return (False, '')
+
+        def next_button_clicked(e):
+            (flag, msg) = checkFields()
+            if flag:
+                errorField.value = msg
+                page.update()
+            else:
+                page.go("/view20")
+
+        def pick_input_file_result(e: ft.FilePickerResultEvent):
+            global data_file_name
+            if e.files:
+                selected_data_file.value = e.files[0].path
+            else:
+                selected_data_file.value = ''
+            data_file_name = selected_data_file.value
+            selected_data_file.update()
+
+        def pick_output_file_result(e: ft.FilePickerResultEvent):
+            global output_file_name
+            selected_output_file.value = e.path
+            output_file_name = selected_output_file.value
+            selected_output_file.update()
+
+        appBar = ft.AppBar(
+                title=ft.Text("ファイル選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                ]
+            )
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        errorField = ft.Text('')
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('データファイル', size=24)
+        description1 = ft.Text('データファイルを選択してください．')
+        pick_input_file_dialog = ft.FilePicker(on_result=pick_input_file_result)
+        input_file_button = ft.ElevatedButton(
+                "sensor data file",
+                icon=ft.icons.UPLOAD_FILE,
+                on_click=lambda _: pick_input_file_dialog.pick_files(
+                    allow_multiple=False,
+                ),
+            )
+        selected_data_file = ft.Text()
+        selected_data_file.value = data_file_name
+        subTitle2 = ft.Text('出力ファイル', size=24)
+        description2 = ft.Text('出力ファイルを指定してください．')
+        pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
+        output_file_button = ft.ElevatedButton(
+                "output file",
+                icon=ft.icons.DOWNLOAD,
+                on_click=lambda _: pick_output_file_dialog.save_file(
+                ),
+            )
+        selected_output_file = ft.Text()
+        selected_output_file.value = output_file_name
+        page.title = "Sensor data filter"
+        page.window_width = 400
+        page.window_height = 500
+        page.overlay.append(pick_input_file_dialog)
+        page.overlay.append(pick_output_file_dialog)
+        row = ft.Row(
+            [
+                nextButton,
+                finish_button
+            ]
+        )
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(subTitle1)
+        lv.controls.append(description1)
+        lv.controls.append(input_file_button)
+        lv.controls.append(selected_data_file)
+        lv.controls.append(line)
+        lv.controls.append(subTitle2)
+        lv.controls.append(description2)
+        lv.controls.append(output_file_button)
+        lv.controls.append(selected_output_file)
+        win = [
+            appBar,
+            row,
+            errorField,
+            line,
+            lv
+        ]
+        helpPageName = 'top'
+        return ft.View("/view10", win)
+        
+    def createView20():
+        global helpPageName, startTime, interval, limit
+        def checkFields():
+            global startTime, interval
+            if int(startTimeBox.value) < 0:
+                return (True, '開始時間は0以上の整数としてください．')
+            if int(intervalBox.value) < 1:
+                return (True, 'インターバルは1以上の整数としてください．')
+            if int(limitBox.value) < 0:
+                return (True, '制限時間は0以上の整数としてください．')
+            interval = int(intervalBox.value)
+            startTime = int(startTimeBox.value)
+            limit = int(limitBox.value)
+            return (False, '')
+        def next_button_clicked(e):
+            (flag, msg) = checkFields()
+            if flag:
+                errorField.value = msg
+                page.update()
+            else:
+                page.go("/view30")
+        def start_time_changed(e):
+            if int(e.control.value) == 0:
+                startTimeData.value = '0(未指定)'
+            else:
+                startTimeData.value = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(int(e.control.value)))
+            page.update()
+        appBar = ft.AppBar(
+                title=ft.Text("時間/周期設定"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                ]
+            )
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        errorField = ft.Text('')
+        line = ft.Divider(height=2, color="black")
+        subTitle1 = ft.Text('データ取得開始時間', size=24)
+        description1 = ft.Text('UNIX時間(単位:秒)で指定してください．')
+        startTimeBox = ft.TextField(label='開始時間',value=str(startTime),on_change=start_time_changed)
+        #startTimeData = ft.Text(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime(startTime)))
+        if startTime != 0:
+            startTimeData = ft.Text(time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(startTime)))
+        else:
+            startTimeData = ft.Text('0(未指定)')
+        subTitle2 = ft.Text('インターバル', size=24)
+        description2 = ft.Text('取得データの間隔(単位:秒)で指定してください．')
+        intervalBox = ft.TextField(label='間隔(秒)',value=str(interval))
+        subTitle3 = ft.Text('制限時間', size=24)
+        description3 = ft.Text('観測時間の遅延最大値(制限時間)を秒単位の数字で指定してください．')
+        limitBox = ft.TextField(label='制限(秒)',value=str(limit))
+        row = ft.Row(
+            [
+                nextButton,
+                finish_button
+            ]
+        )
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(subTitle1)
+        lv.controls.append(description1)
+        lv.controls.append(startTimeBox)
+        lv.controls.append(startTimeData)
+        lv.controls.append(line)
+        lv.controls.append(subTitle2)
+        lv.controls.append(description2)
+        lv.controls.append(intervalBox)
+        lv.controls.append(subTitle3)
+        lv.controls.append(description3)
+        lv.controls.append(limitBox)
+        win = [
+            appBar,
+            row,
+            errorField,
+            line,
+            lv
+        ]
+        helpPageName = 'time'
+        return ft.View("/view20", win)
+
+    def createView30():
+        global helpPageName, targetTopic, targetSensorID, targetSensorType
+        def next_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view40")
+        def add_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view31")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            targetTopic.pop(num-1)
+            targetSensorID.pop(num-1)
+            targetSensorType.pop(num-1)
+            page.go("/view32")
+        appBar = ft.AppBar(
+                title=ft.Text("センサ選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                ]
+            )
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finish_button
+            ]
+        )
+        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        row2 = ft.Row(
+            [
+                deleteBox,
+                deleteButton
+            ]
+        )
+        errorField = ft.Text('')
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        targetBox = ft.TextField(label='MQTTトピック')
+        targetTopic.append(targetBox)
+        targetType = ft.Dropdown(
+            label="センサタイプ",
+            autofocus=True,
+        )
+        for i in range(len(sensorTypeName)):
+            targetType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        targetSensorType.append(targetType)
+        idBox = ft.TextField(label='センサID', value='-1')
+        targetSensorID.append(idBox)
+        if 1==len(targetTopic):
+            win = [appBar , row1, addButton, errorField , line]
+        else:
+            win = [appBar , row1, addButton, row2 ,errorField, line]
+        for i in range(len(targetTopic)):
+            lv.controls.append(ft.Text('監視対象'+str(i+1)))
+            lv.controls.append(targetTopic[i])
+            lv.controls.append(targetSensorType[i])
+            lv.controls.append(targetSensorID[i])
+            lv.controls.append(line)
+        win.append(lv)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName = 'target'
+        return ft.View("/view30", win)
+
+    def createView31():
+        global helpPageName, targetTopic, targetSensorID, targetSensorType
+        def next_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view40")
+        def add_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view30")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            targetTopic.pop(num-1)
+            targetSensorID.pop(num-1)
+            targetSensorType.pop(num-1)
+            page.go("/view32")
+        appBar = ft.AppBar(
+                title=ft.Text("センサ選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                ]
+            )
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finish_button
+            ]
+        )
+        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        row2 = ft.Row(
+            [
+                deleteBox,
+                deleteButton
+            ]
+        )
+        errorField = ft.Text('')
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        targetBox = ft.TextField(label='MQTTトピック')
+        targetTopic.append(targetBox)
+        targetType = ft.Dropdown(
+            label="センサタイプ",
+            autofocus=True,
+        )
+        for i in range(len(sensorTypeName)):
+            targetType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        targetSensorType.append(targetType)
+        idBox = ft.TextField(label='センサID', value='-1')
+        targetSensorID.append(idBox)
+        if 1==len(targetTopic):
+            win = [appBar , row1, addButton, errorField , line]
+        else:
+            win = [appBar , row1, addButton, row2 ,errorField, line]
+        for i in range(len(targetTopic)):
+            lv.controls.append(ft.Text('監視対象'+str(i+1)))
+            lv.controls.append(targetTopic[i])
+            lv.controls.append(targetSensorType[i])
+            lv.controls.append(targetSensorID[i])
+            lv.controls.append(line)
+        win.append(lv)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName = 'target'
+        return ft.View("/view31", win)
+
+    def createView32():
+        global helpPageName, targetTopic, targetSensorID, targetSensorType
+        def next_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view40")
+        def add_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view30")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            targetTopic.pop(num-1)
+            targetSensorID.pop(num-1)
+            targetSensorType.pop(num-1)
+            page.go("/view33")
+        appBar = ft.AppBar(
+                title=ft.Text("センサ選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                ]
+            )
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finish_button
+            ]
+        )
+        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        row2 = ft.Row(
+            [
+                deleteBox,
+                deleteButton
+            ]
+        )
+        errorField = ft.Text('')
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        #targetBox = ft.TextField(label='MQTTトピック')
+        #targetTopic.append(targetBox)
+        #targetType = ft.Dropdown(
+        #    label="センサタイプ",
+        #    autofocus=True,
+        #)
+        #for i in range(len(sensorTypeName)):
+        #    targetType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        #targetSensorType.append(targetType)
+        #idBox = ft.TextField(label='センサID')
+        #targetSensorID.append(idBox)
+        if 1==len(targetTopic):
+            win = [appBar , row1, addButton, errorField , line]
+        else:
+            win = [appBar , row1, addButton, row2 ,errorField, line]
+        for i in range(len(targetTopic)):
+            lv.controls.append(ft.Text('監視対象'+str(i+1)))
+            lv.controls.append(targetTopic[i])
+            lv.controls.append(targetSensorType[i])
+            lv.controls.append(targetSensorID[i])
+            lv.controls.append(line)
+        win.append(lv)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName = 'target'
+        return ft.View("/view32", win)
+
+    def createView33():
+        global helpPageName, targetTopic, targetSensorID, targetSensorType
+        def next_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view40")
+        def add_button_clicked(e):
+            (flag, val) = checkTargetFields()
+            if flag:
+                errorField.value = val
+                page.update()
+            else:
+                page.go("/view30")
+        def delete_button_clicked(e):
+            num = int(deleteBox.value)
+            flag = False
+            for i in  range(len(targetTopic)):
+                if i==num:
+                    flag = True
+            if not flag:
+                errorField.value = '削除対象の番号を正しく入力してください．'
+                page.update()
+            targetTopic.pop(num-1)
+            page.go("/view32")
+        appBar = ft.AppBar(
+                title=ft.Text("センサ選択"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                ]
+            )
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finish_button
+            ]
+        )
+        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        deleteBox = ft.TextField(label='削除対象番号',value='')
+        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        row2 = ft.Row(
+            [
+                deleteBox,
+                deleteButton
+            ]
+        )
+        errorField = ft.Text('')
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        #targetBox = ft.TextField(label='MQTTトピック')
+        #targetTopic.append(targetBox)
+        #targetType = ft.Dropdown(
+        #    label="センサタイプ",
+        #    autofocus=True,
+        #)
+        #for i in range(len(sensorTypeName)):
+        #    targetType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        #targetSensorType.append(targetType)
+        #idBox = ft.TextField(label='センサID')
+        #targetSensorID.append(idBox)
+        if 1==len(targetTopic):
+            win = [appBar , row1, addButton, errorField , line]
+        else:
+            win = [appBar , row1, addButton, row2 ,errorField, line]
+        for i in range(len(targetTopic)):
+            lv.controls.append(ft.Text('監視対象'+str(i+1)))
+            lv.controls.append(targetTopic[i])
+            lv.controls.append(targetSensorType[i])
+            lv.controls.append(targetSensorID[i])
+            lv.controls.append(line)
+        win.append(lv)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName = 'target'
+        return ft.View("/view33", win)
+
+    def createView40():
+        def exec_button_clicked(e):
+            global error
+            execButton.disabled = True
+            (flag, error) = processData()
+            if flag:
+                ft.app(target=errorWindow)
+            page.window_destroy()
+        def back_button_clicked(e):
+            page.go("/view10")
+        appBar = ft.AppBar(
+                title=ft.Text("定義一覧"),
+                bgcolor=ft.colors.AMBER,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        execButton = ft.ElevatedButton(text="Execute", on_click=exec_button_clicked)
+        backButton = ft.ElevatedButton(text="Back", on_click=back_button_clicked)
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        row = ft.Row([execButton, backButton, finish_button])
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        win = [appBar, row, line, lv]
+        subTitle1 = ft.Text('ファイル', size=24)
+        subTitle11 = ft.Text('データファイル名', weight=ft.FontWeight.BOLD)
+        val11 = ft.Text(' : ' + data_file_name)
+        row11 = ft.Row([subTitle11,val11])
+        subTitle12 = ft.Text('出力ファイル', weight=ft.FontWeight.BOLD)
+        val12 = ft.Text(' : ' + output_file_name)
+        row12 = ft.Row([subTitle12,val12])
+        subTitle2 = ft.Text('時間', size=24)
+        subTitle21 = ft.Text('センサデータ開始時刻', weight=ft.FontWeight.BOLD)
+        if startTime==0:
+            val21 = ft.Text(' : 0')
+        else:
+            val21 = ft.Text(' : ' + time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(startTime)))
+        row21 = ft.Row([subTitle21,val21])
+        subTitle22 = ft.Text('センサデータインターバル', weight=ft.FontWeight.BOLD)
+        val22 = ft.Text(' : '+str(interval))
+        row22 = ft.Row([subTitle22,val22])
+        subTitle23 = ft.Text('センサデータ制限時間', weight=ft.FontWeight.BOLD)
+        val23 = ft.Text(' : '+str(limit))
+        row23 = ft.Row([subTitle23,val23])
+        lv.controls.append(subTitle1)
+        lv.controls.append(row11)
+        lv.controls.append(row12)
+        lv.controls.append(subTitle2)
+        lv.controls.append(row21)
+        lv.controls.append(row22)
+        lv.controls.append(row23)
+        subTitle3 = ft.Text('センサ', size=24)
+        lv.controls.append(subTitle3)
+        for i in range(len(targetTopic)):
+            subTitle31 = ft.Text('MQTTトピック', weight=ft.FontWeight.BOLD)
+            val31 = ft.Text(' : '+targetTopic[i].value)
+            row31 = ft.Row([subTitle31,val31])
+            subTitle32 = ft.Text('センサ種別', weight=ft.FontWeight.BOLD)
+            val32 = ft.Text(' : '+sensorTypeText[targetSensorType[i].value])
+            row32 = ft.Row([subTitle32,val32])
+            subTitle33 = ft.Text('センサID', weight=ft.FontWeight.BOLD)
+            val33 = ft.Text(' : ' + targetSensorID[i].value)
+            row33 = ft.Row([subTitle33,val33])
+            lv.controls.append(row31)
+            lv.controls.append(row32)
+            lv.controls.append(row33)
+        page.auto_scroll = True
+        page.scroll = ft.ScrollMode.HIDDEN
+        helpPageName = 'check'
+        return ft.View("/view40", win)
+
+    def route_change(handler):
+        troute = ft.TemplateRoute(handler.route)
+        page.views.clear()
+        if troute.match("/view10"):
+            page.views.append(createView10())
+        elif troute.match("/view20"):
+            page.views.append(createView20())
+        elif troute.match("/view30"):
+            page.views.append(createView30())
+        elif troute.match("/view31"):
+            page.views.append(createView31())
+        elif troute.match("/view32"):
+            page.views.append(createView32())
+        elif troute.match("/view33"):
+            page.views.append(createView33())
+        elif troute.match("/view40"):
+            page.views.append(createView40())
+        page.update()
+
+    page.on_route_change = route_change
+    page.title = "filter for sensor data"
+    page.go("/view10")
+
+if __name__ == '__main__':
+    error = loadHelp(help_file)
+    if error != "":
+        ft.app(target=errorWindow)
+    else:
+        ft.app(target=mainWindow)
+
+
+# In[ ]:
+
+
+
+
