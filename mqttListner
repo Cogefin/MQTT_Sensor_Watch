@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[5]:
+# In[ ]:
 
 
 #!/usr/bin/env python
@@ -20,6 +20,9 @@ help_file="Help/mqttListner.yaml"
 
 timeout = 60
 apiVersion = mqtt_client.CallbackAPIVersion.VERSION2
+msgBuffMaxSize = 500
+msgBuff = []
+
 
 class SensorType(Enum):
     ACCELEROMETER         = 1
@@ -224,6 +227,7 @@ def mainWindow(page: ft.Page):
             mqttAuth.value = mqtt_auth
         msg = ft.Text()
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        line = ft.Divider(height=2, color="black")
         helpPageName = 'mqttGeneral'
         return ft.View("/view1", [
             ft.AppBar(
@@ -233,21 +237,20 @@ def mainWindow(page: ft.Page):
                     ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             ),
+            nextButton,
+            msg,
+            line,
             ft.Text("MQTTブローカアドレス", style=ft.TextThemeStyle.TITLE_MEDIUM),
             serverAddress,
-            ft.Divider(height=2, color="black"),
+            line,
             ft.Text("MQTTブローカポート番号", style=ft.TextThemeStyle.TITLE_MEDIUM),
             mqttPort,
-            ft.Divider(height=2, color="black"),
+            line,
             ft.Text("MQTTトピック", style=ft.TextThemeStyle.TITLE_MEDIUM),
             mqttTopic,
-            ft.Divider(height=2, color="black"),
+            line,
             ft.Text("MQTT認証の使用", style=ft.TextThemeStyle.TITLE_MEDIUM),
-            mqttAuth,
-            ft.Divider(height=2, color="black"),
-            msg,
-            ft.Divider(height=2, color="black"),
-            nextButton
+            mqttAuth
         ])
 
     def createView2():
@@ -264,6 +267,7 @@ def mainWindow(page: ft.Page):
         if mqtt_pass != '':
             userPass.value = mqtt_pass
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        line = ft.Divider(height=2, color="black")
         helpPageName = 'mqttAuth'
         return ft.View("/view2", [
             ft.AppBar(
@@ -273,13 +277,13 @@ def mainWindow(page: ft.Page):
                     ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             ),
+            nextButton,
+            line,
             ft.Text("MQTTユーザ名", style=ft.TextThemeStyle.TITLE_MEDIUM),
             userName,
-            ft.Divider(height=2, color="black"),
+            line,
             ft.Text("MQTTパスワード", style=ft.TextThemeStyle.TITLE_MEDIUM),
-            userPass,
-            ft.Divider(height=2, color="black"),
-            nextButton
+            userPass
         ])
 
     def createView3():
@@ -307,6 +311,7 @@ def mainWindow(page: ft.Page):
             outputSelection.value = 2
         msg = ft.Text()
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        line = ft.Divider(height=2, color="black")
         helpPageName = 'outputSelection'
         return ft.View("/view3", [
             ft.AppBar(
@@ -316,10 +321,10 @@ def mainWindow(page: ft.Page):
                     ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             ),
-            outputSelection,
+            nextButton,
             msg,
-            ft.Divider(height=2, color="black"),
-            nextButton
+            line,
+            outputSelection,
         ])
 
     def createView4():
@@ -337,6 +342,7 @@ def mainWindow(page: ft.Page):
             selected_output_file.value = output_file_name
         page.overlay.append(pick_output_file_dialog)
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        line = ft.Divider(height=2, color="black")
         helpPageName = 'selectOutputFile'
         return ft.View("/view4", [
             ft.AppBar(
@@ -346,6 +352,8 @@ def mainWindow(page: ft.Page):
                     ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             ),
+            nextButton,
+            line,
             ft.Text("MQTTデータ出力ファイル", style=ft.TextThemeStyle.TITLE_MEDIUM),
             ft.ElevatedButton(
                 "output file",
@@ -353,8 +361,7 @@ def mainWindow(page: ft.Page):
                 on_click=lambda _: pick_output_file_dialog.save_file(),
                 ),
             selected_output_file,
-            ft.Divider(height=2, color="black"),
-            nextButton
+            line
         ])
 
     def createView5():
@@ -372,6 +379,7 @@ def mainWindow(page: ft.Page):
             selected_output_db.value = output_database_name
         page.overlay.append(pick_output_db_dialog)
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        line = ft.Divider(height=2, color="black")
         helpPageName = 'selectOutputDB'
         return ft.View("/view5", [
             ft.AppBar(
@@ -381,6 +389,8 @@ def mainWindow(page: ft.Page):
                     ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             ),
+            nextButton,
+            line,
             ft.Text("MQTTデータ出力データベース", style=ft.TextThemeStyle.TITLE_MEDIUM),
             ft.ElevatedButton(
                 "output data base file",
@@ -388,8 +398,7 @@ def mainWindow(page: ft.Page):
                 on_click=lambda _: pick_output_db_dialog.save_file(),
                 ),
             selected_output_db,
-            ft.Divider(height=2, color="black"),
-            nextButton
+            line
         ])
 
     def createView6():
@@ -401,6 +410,13 @@ def mainWindow(page: ft.Page):
         page.window_height = 900
         execButton = ft.ElevatedButton(text="Exec", on_click=exec_button_clicked)
         backButton = ft.ElevatedButton(text="Back", on_click=back_button_clicked)
+        row = ft.Row(
+                [
+                    execButton,
+                    backButton
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
         if mqtt_auth:
             useAuth = "YES"
         else:
@@ -429,32 +445,32 @@ def mainWindow(page: ft.Page):
                     ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             ),
+            row,
+            line,
             ft.Text("MQTTブローカアドレス", style=ft.TextThemeStyle.TITLE_MEDIUM),
             ft.Text(mqtt_broker),
-            ft.Divider(height=2, color="black"),
+            line,
             ft.Text("MQTTブローカポート番号", style=ft.TextThemeStyle.TITLE_MEDIUM),
             ft.Text(mqtt_port),
-            ft.Divider(height=2, color="black"),
+            line,
             ft.Text("MQTTトピック", style=ft.TextThemeStyle.TITLE_MEDIUM),
             ft.Text(mqtt_topic),
-            ft.Divider(height=2, color="black"),
+            line,
             ft.Text("MQTT認証", style=ft.TextThemeStyle.TITLE_MEDIUM),
             ft.Text(useAuth),
-            ft.Divider(height=2, color="black"),
+            line,
             ft.Text("MQTTユーザ名", style=ft.TextThemeStyle.TITLE_MEDIUM),
             ft.Text(mqtt_user),
-            ft.Divider(height=2, color="black"),
+            line,
             ft.Text("MQTTパスフレーズ", style=ft.TextThemeStyle.TITLE_MEDIUM),
             ft.Text(mqtt_pass),
-            ft.Divider(height=2, color="black"),
+            line,
             ft.Text("データ出力メディア", style=ft.TextThemeStyle.TITLE_MEDIUM),
             ft.Text(targetMedia),
-            ft.Divider(height=2, color="black"),
+            line,
             ft.Text("データ出力先", style=ft.TextThemeStyle.TITLE_MEDIUM),
             ft.Text(fileName),
-            ft.Divider(height=2, color="black"),
-            execButton,
-            backButton
+            line
         ])
 
     def createView7():
@@ -468,10 +484,16 @@ def mainWindow(page: ft.Page):
                 print("mqtt connection ends.")
 
         def on_message(client, userdata, msg):
+            global msgBuffMaxSize, msgBuff
             message = msg.payload.decode()
             json_data = json.loads(message)
             dataStr = output_data(msg.topic, json_data)
-            sensorMsg.value = dataStr
+            if len(msgBuff) > msgBuffMaxSize:
+                msgBuff.pop(0)
+                lv.controls.pop(0)
+            msgBuff.append(dataStr)
+            tmp = ft.Text(dataStr)
+            lv.controls.append(tmp)
             page.update()
 
         def printout_sensor_data(topic, id, type, date, sensor_data):
@@ -482,7 +504,7 @@ def mainWindow(page: ft.Page):
             if outputFile_rst:
                 outputFile.write(outputString+"\n")
                 outputFile.flush()
-                print(outputString)
+                #print(outputString)
             return outputString
 
         def insert_data_to_db(topic, id, type, date, sensor_data):
@@ -691,7 +713,8 @@ def mainWindow(page: ft.Page):
             client.password = mqtt_pass
         client.connect(mqtt_broker, int(mqtt_port), timeout)
         client.loop_start()
-        sensorMsg = ft.Text()
+        #sensorMsg = ft.Text()
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         fileOpenResult = False
         if str(outputTarget)=='1':
             try:
@@ -704,6 +727,8 @@ def mainWindow(page: ft.Page):
             outputFile_rst = open_db(output_database_name)
             if not outputFile_rst:
                 sensorMsg.value = "output database file open failure."
+        line = ft.Divider(height=2, color="black")
+        finish_buttion = ft.ElevatedButton( "Close", on_click=lambda _: page.window_destroy())
         helpPageName = 'execution'
         return ft.View("/view7", [
             ft.AppBar(
@@ -713,10 +738,10 @@ def mainWindow(page: ft.Page):
                     ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             ),
-            sensorMsg,
-            ft.Divider(height=2, color="black"),
-            ft.ElevatedButton(
-                "Close", on_click=lambda _: page.window_destroy()),
+            finish_buttion,
+            line,
+            #sensorMsg,
+            lv
         ])
 
     def route_change(handler):

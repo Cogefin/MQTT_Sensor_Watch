@@ -314,11 +314,11 @@ def dataFilter():
     #    if matchTargets(sensorData[i]):
     #        matchedData.append(sensorData[i])
     matchedData = matchTargets(sensorData)
-    print(matchedData)
-    print('**********************************************')
+    #print(matchedData)
+    #print('**********************************************')
     filterData = matchTime(matchedData)
-    print(filterData)
-    print('**********************************************')
+    #print(filterData)
+    #print('**********************************************')
     for i in range(len(filterData)):
         if outputData(filterData[i]):
             return (True, 'Can not write data to output file.')
@@ -447,7 +447,7 @@ def mainWindow(page: ft.Page):
             line,
             lv
         ]
-        helpPageName = 'top'
+        helpPageName = 'fileSelection'
         return ft.View("/view10", win)
         
     def createView20():

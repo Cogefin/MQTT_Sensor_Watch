@@ -1,0 +1,703 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import flet as ft
+from flet_multi_page import subPage
+from paho.mqtt import client as mqtt_client
+import json
+from enum import Enum
+import yaml
+import time
+import datetime
+import requests
+import sys
+sys.path.append("lib")
+
+from arduino_iot_cloud import ArduinoCloudClient
+
+help_file_name="Help/mqttToArduino.yaml"
+
+config_file_name = ''
+apiVersion = mqtt_client.CallbackAPIVersion.VERSION2
+
+mqttTimeout = 60
+
+mqttServer = ''
+mqttPort = 0
+mqttAuth = True
+mqttUser = ''
+mqttPasswd = ''
+mqttTopic = ''
+
+msgBuffMaxSize = 500
+msgBuff = []
+
+
+
+
+class SensorType(Enum):
+    ACCELEROMETER         = 1
+    MAGNETIC_FIELD        = 2
+    ORIENTATION           = 3
+    GYROSCOPE             = 4
+    LIGHT                 = 5
+    PRESSURE              = 6
+    PROXIMITY             = 7
+    GRAVITY               = 8
+    LINEAR_ACCELERATION   = 9
+    ROTATION_VECTOR       = 10
+    RELATIVE_HUMIDITY     = 11
+    AMBIENT_TEMPERATURE   = 12
+    VOLTAGE               = 13
+    CURRENT               = 14
+    COLOR                 = 15
+    SIMPLE                = 16
+    ANGLE                 = 17
+    ONE_AXIS_GYRO         = 18
+    DISTANCE              = 19
+    LARGE_INT             = 20
+    DUST                  = 21
+    IRREMOTE              = 22
+    POSITION              = 23
+    DATE                  = 24
+    SPEED_KNOT            = 25
+    SIMPLE_ANALOG         = 26
+
+
+sensorTypeNum = {
+    'ACCELEROMETER'       : 1,
+    'MAGNETIC_FIELD'      : 2 ,
+    'ORIENTATION'         : 3 ,
+    'GYROSCOPE'           : 4 ,
+    'LIGHT'               : 5 ,
+    'PRESSURE'            : 6 ,
+    'PROXIMITY'           : 7 ,
+    'GRAVITY'             : 8 ,
+    'LINEAR_ACCELERATION' : 9 ,
+    'ROTATION_VECTOR'     : 10 ,
+    'RELATIVE_HUMIDITY'   : 11 ,
+    'AMBIENT_TEMPERATURE' : 12 ,
+    'VOLTAGE'             : 13 ,
+    'CURRENT'             : 14 ,
+    'COLOR'               : 15 ,
+    'SIMPLE'              : 16 ,
+    'ANGLE'               : 17 ,
+    'ONE_AXIS_GYRO'       : 18 ,
+    'DISTANCE'            : 19 ,
+    'LARGE_INT'           : 20 ,
+    'DUST'                : 21 ,
+    'IRREMOTE'            : 22 ,
+    'POSITION'            : 23 ,
+    'DATE'                : 24 ,
+    'SPEED_KNOT'          : 25 ,
+    'SIMPLE_ANALOG'       : 26
+}
+
+
+sensorTypeName = [
+    'DUMMY',
+    'ACCELEROMETER',
+    'MAGNETIC_FIELD',
+    'ORIENTATION',
+    'GYROSCOPE',
+    'LIGHT',
+    'PRESSURE',
+    'PROXIMITY',
+    'GRAVITY',
+    'LINEAR_ACCELERATION',
+    'ROTATION_VECTOR',
+    'RELATIVE_HUMIDITY',
+    'AMBIENT_TEMPERATURE',
+    'VOLTAGE',
+    'CURRENT',
+    'COLOR',
+    'SIMPLE',
+    'ANGLE',
+    'ONE_AXIS_GYRO',
+    'DISTANCE',
+    'LARGE_INT',
+    'DUST',
+    'IRREMOTE',
+    'POSITION',
+    'DATE',
+    'SPEED_KNOT',
+    'SIMPLE_ANALOG'
+]
+
+sensorTypeText = {
+    'ACCELEROMETER'       : '3軸加速度' ,
+    'MAGNETIC_FIELD'      : '磁界' ,
+    'ORIENTATION'         : '方角' ,
+    'GYROSCOPE'           : '3軸ジャイロ' ,
+    'LIGHT'               : '光センサ' ,
+    'PRESSURE'            : '気圧センサ' ,
+    'PROXIMITY'           : '近接センサ' ,
+    'GRAVITY'             : '重力' ,
+    'LINEAR_ACCELERATION' : '3軸リニア加速度' ,
+    'ROTATION_VECTOR'     : '回転ベクトル センサ' ,
+    'RELATIVE_HUMIDITY'   : '湿度' ,
+    'AMBIENT_TEMPERATURE' : '気温' ,
+    'VOLTAGE'             : '電圧' ,
+    'CURRENT'             : '電流' ,
+    'COLOR'               : '色彩' ,
+    'SIMPLE'              : '単純デジタルセンサ' ,
+    'ANGLE'               : '角度' ,
+    'ONE_AXIS_GYRO'       : '1軸ジャイロ' ,
+    'DISTANCE'            : '距離' ,
+    'LARGE_INT'           : '整数' ,
+    'DUST'                : 'ホコリ' ,
+    'IRREMOTE'            : '赤外線' ,
+    'POSITION'            : '位置' ,
+    'DATE'                : '時刻' ,
+    'SPEED_KNOT'          : '速度(ノット)' ,
+    'SIMPLE_ANALOG'       : '単純アナログ'
+}
+
+def sensorData_to_str(topic, data):
+    sensor_topic = 'topic: ' + topic
+    sensor_id = str(data['id'])
+    sensor_type = int(data['type'])
+    sensor_type_name = sensorTypeText[sensorTypeName[sensor_type]]
+    sensor_unix_date = int(data['time'])
+    sensor_date = datetime.datetime.fromtimestamp(sensor_unix_date).strftime('%Y-%m-%d %H:%M:%S')
+    if sensor_type == SensorType.ACCELEROMETER.value:
+        sensor_data_str = 'x - ' + str(data['data'][0]['x']) + ' , y - ' + str(data['data'][1]['y']) + ', z - ' + str(data['data'][2]['z'])
+    elif sensor_type == SensorType.GYROSCOPE.value:
+        sensor_data_str = 'x - ' + str(data['data'][0]['x']) + ' , y - ' + str(data['data'][1]['y']) + ', z - ' + str(data['data'][2]['z'])
+    elif sensor_type == SensorType.LIGHT.value:
+        sensor_data_str = str(data['data'][0]['light'])
+    elif sensor_type == SensorType.PRESSURE.value:
+        sensor_data_str = str(data['data'][0]['air_pressure'])
+    elif sensor_type == SensorType.LINEAR_ACCELERATION.value:
+        sensor_data_str = 'x - ' + str(data['data'][0]['x']) + ' , y - ' + str(data['data'][1]['y']) + ', z - ' + str(data['data'][2]['z'])
+    elif sensor_type == SensorType.RELATIVE_HUMIDITY.value:
+        sensor_data_str = str(data['data'][0]['humidity'])
+    elif sensor_type == SensorType.AMBIENT_TEMPERATURE.value:
+        sensor_data_str = str(data['data'][0]['temperature'])
+    elif sensor_type == SensorType.CURRENT.value:
+        sensor_data_str = str(data['data'][0]['current'])
+    elif sensor_type == SensorType.COLOR.value:
+        sensor_data_str = 'r - ' + str(data['data'][0]['r']) + ' , g - ' + str(data['data'][1]['g']) + ', b - ' + str(data['data'][2]['b']) + ', rgba - ' + str(data['data'][3]['rgba'])
+    elif sensor_type == SensorType.SIMPLE.value:
+        sensor_data_str = str(data['data'][0]['value'])
+    elif sensor_type == SensorType.ANGLE.value:
+        sensor_data_str = str(data['data'][0]['angle'])
+    elif sensor_type == SensorType.ONE_AXIS_GYRO.value:
+        sensor_data_str = str(data['data'][0]['roll'])
+    elif sensor_type == SensorType.DISTANCE.value:
+        sensor_data_str = str(data['data'][0]['distance'])
+    elif sensor_type == SensorType.DUST.value:
+        sensor_data_str = str(data['data'][0]['dust'])
+    elif sensor_type == SensorType.POSITION.value:
+        sensor_data_str = '緯度 - ' + str(data['data'][0]['latitude']) + ' , 経度 - ' + str(data['data'][1]['longtitude']) + ', 標高 - ' + str(data['data'][2]['altitude']) + ', dop - ' + str(data['data'][3]['dop'])
+    elif sensor_type == SensorType.SPEED_KNOT.value:
+        sensor_data_str = str(data['data'][0]['speed_knot'])
+    elif sensor_type == SensorType.SIMPLE_ANALOG.value:
+        sensor_data_str = str(data['data'][0]['value'])
+    elif sensor_type == SensorType.DATE.value:
+        sensor_data_str = '年 - ' + str(data['data'][0]['year']) + ' , 月 - ' + str(data['data'][1]['month']) + ' , 日 - ' + str(data['data'][2]['day']) + ' , 曜日 - ' + str(data['data'][3]['dayOfWeek'])
+        sensor_data_str = sensor_data_str + ' , 時 - ' + str(data['data'][4]['hour']) + ' , 分 - ' + str(data['data'][5]['minute']) + ' , 秒 - ' + str(data['data'][6]['second'])
+        sensor_data_str = sensor_data_str + ' , ミリ秒 - ' + str(data['data'][7]['millisecond'])
+    else:
+        return ''
+    retval = sensor_topic + ' , ID: ' + sensor_id + ' , 種類: ' + sensor_type_name + ' , 時刻: ' + sensor_date + ' , { ' + sensor_data_str + ' }'
+    return retval
+
+def searchMappingParam(topic,data):
+    global config
+    for i in range(len(config['mapping'])):
+        data_Topic = ''.join(topic.splitlines())
+        config_Topic = ''.join(config['mapping'][i]['topic'].splitlines())
+        data_sensor_type = int(data['type'])
+        config_sensor_type = sensorTypeNum[config['mapping'][i]['sensorType']]
+        data_sensor_id = int(data['id'])
+        config_sensor_id = int(config['mapping'][i]['sensorID'])
+        if (data_Topic == config_Topic) and (data_sensor_type == config_sensor_type):
+            if (config_sensor_id < 0) or (data_sensor_id == config_sensor_id):
+                return i
+    return -1
+
+def sendData(mappingNum, topic, data):
+    global config, arduinoClient
+    data_date = 'time='+str(data['time'])
+    sensor_type = int(data['type'])
+    data_label_array = config['mapping'][mappingNum]['label']
+    if sensor_type == SensorType.ACCELEROMETER.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['x']
+        arduinoClient[data_label_array[1]] = data['data'][1]['y']
+        arduinoClient[data_label_array[2]] = data['data'][2]['z']
+    elif sensor_type == SensorType.GYROSCOPE.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['x']
+        arduinoClient[data_label_array[1]] = data['data'][1]['y']
+        arduinoClient[data_label_array[2]] = data['data'][2]['z']
+    elif sensor_type == SensorType.LIGHT.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['light']
+    elif sensor_type == SensorType.PRESSURE.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['air_pressure']
+    elif sensor_type == SensorType.LINEAR_ACCELERATION.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['x']
+        arduinoClient[data_label_array[1]] = data['data'][1]['y']
+        arduinoClient[data_label_array[2]] = data['data'][2]['z']
+    elif sensor_type == SensorType.RELATIVE_HUMIDITY.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['humidity']
+    elif sensor_type == SensorType.AMBIENT_TEMPERATURE.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['temperature']
+    elif sensor_type == SensorType.CURRENT.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['current']
+    elif sensor_type == SensorType.COLOR.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['r']
+        arduinoClient[data_label_array[1]] = data['data'][1]['g']
+        arduinoClient[data_label_array[2]] = data['data'][2]['b']
+        arduinoClient[data_label_array[3]] = data['data'][3]['rgba']
+    elif sensor_type == SensorType.SIMPLE.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['value']
+    elif sensor_type == SensorType.ANGLE.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['angle']
+    elif sensor_type == SensorType.ONE_AXIS_GYRO.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['roll']
+    elif sensor_type == SensorType.DISTANCE.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['distance']
+    elif sensor_type == SensorType.DUST.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['dust']
+    elif sensor_type == SensorType.POSITION.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['latitude']
+        arduinoClient[data_label_array[1]] = data['data'][1]['longtitude']
+        arduinoClient[data_label_array[2]] = data['data'][2]['altitude']
+        arduinoClient[data_label_array[3]] = data['data'][3]['dop']
+    elif sensor_type == SensorType.SPEED_KNOT.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['speed_knot']
+    elif sensor_type == SensorType.SIMPLE_ANALOG.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['value']
+    elif sensor_type == SensorType.DATE.value:
+        arduinoClient[data_label_array[0]] = data['data'][0]['year']
+        arduinoClient[data_label_array[1]] = data['data'][1]['month']
+        arduinoClient[data_label_array[2]] = data['data'][2]['day']
+        arduinoClient[data_label_array[3]] = data['data'][3]['dayOfWeek']
+        arduinoClient[data_label_array[4]] = data['data'][4]['hour']
+        arduinoClient[data_label_array[5]] = data['data'][5]['minute']
+        arduinoClient[data_label_array[6]] = data['data'][6]['second']
+        arduinoClient[data_label_array[7]] = data['data'][7]['millisecond']
+    else:
+        return 'unknown sensor type'
+    return ''
+
+def processData(topic, data):
+    mapping = searchMappingParam(topic,data)
+    if 0 > mapping:
+        return ''
+    return sendData(mapping, topic, data)
+
+def open_config_file(config_file_name):
+    config = {}
+    try:
+        with open(config_file_name, mode='r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+    except Exception as e:
+        error = 'Exception occurred while loading config file of this application...'
+        return [error , config]
+    return ['', config]
+
+def load_init_file(help_file_name):
+    help = {}
+    error = ''
+    try:
+        with open(help_file_name, mode='r', encoding='utf-8') as f:
+            help = yaml.safe_load(f)
+    except Exception as e:
+        error = 'Exception occurred while loading config file of this application...'
+    return [error , help]
+
+def errorWindow(page: ft.Page):
+    global error
+    page.title = "Error"
+    page.window_width = 400
+    page.window_height = 500
+    page.autoscroll = True
+    appBar = ft.AppBar(title=ft.Text("Error"),bgcolor=ft.colors.RED)
+    error_field = ft.Text(error)
+    line = ft.Divider(height=2, color="black")
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    page.add(
+        appBar,
+        error_field,
+        line,
+        finish_button)
+
+def icon_clicked(e):
+    global help
+    p = subPage(
+        controls=[
+            ft.Markdown(
+                help[helpPageName],
+                selectable=True,
+                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            )
+        ],
+        page_props={"window_width":800},
+    )
+    p.start()
+
+def checkBoolean(val):
+    if val == 'True' or val == 'true' or val == True:
+        return True
+    else:
+        return False
+
+def mainWindow(page: ft.Page):
+    def createView10():
+        global helpPageName, config
+        def pick_input_file_result(e: ft.FilePickerResultEvent):
+            global config_file_name
+            if e.files:
+                selected_input_file.value = e.files[0].path
+            else:
+                selected_input_file.value = "Canceled."
+            config_file_name = selected_input_file.value
+            selected_input_file.update()
+
+        def next_button_clicked(e):
+            global error, config, mqttTimeout
+            if (config_file_name=="") or (config_file_name=="Canceled."):
+                warning_message.value = "Please select input file."
+                warning_message.update()
+                return
+            [error, config] = open_config_file(config_file_name)
+            mqttTimeout = int(config['mqtt']['timeout'])
+            if '' != error:
+                ft.app(target=errorWindow)
+                page.window_destroy()
+            else:
+                page.go("/view20")
+
+        appBar = ft.AppBar(
+                title=ft.Text("Load config file."),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        subTitle1 = ft.Text("Configuration file selection.", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        pick_input_file_dialog = ft.FilePicker(on_result=pick_input_file_result)
+        config_file_button = ft.ElevatedButton(
+                "configuration file",
+                icon=ft.icons.UPLOAD_FILE,
+                on_click=lambda _: pick_input_file_dialog.pick_files(
+                    allow_multiple=False,
+                ),
+            )
+        selected_input_file = ft.Text()
+        line = ft.Divider(height=2, color="black")
+
+        page.window_width = 400
+        page.window_height = 500
+        page.overlay.append(pick_input_file_dialog)
+
+        next_button = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        warning_message = ft.Text()
+        row = ft.Row(
+                [
+                    next_button,
+                    finish_button
+                ]
+            )
+        
+        helpPageName = 'loadConfig'
+        return ft.View("/view10", [
+            appBar,
+            row,
+            warning_message,
+            line,
+            subTitle1,
+            config_file_button,
+            selected_input_file,
+            line
+        ])
+
+    def createView20():
+        global helpPageName, mqttServer, mqttPort, mqttAuth, mqttUser, mqttPasswd, mqttTopic
+        def next_button_clicked(e):
+            page.go("/view30")
+        appBar = ft.AppBar(
+                title=ft.Text("Config parameters."),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        next_button = ft.ElevatedButton(text="next", on_click=next_button_clicked)
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+                [
+                    next_button,
+                    finish_button
+                ]
+            )
+        subTitle1 = ft.Text("MQTT関連.", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        mqttServer = config['mqtt']['address']
+        mqttPort = int(config['mqtt']['port'])
+        mqttAuth = checkBoolean(config['mqtt']['auth'])
+        mqttUser = config['mqtt']['user']
+        mqttPasswd = config['mqtt']['pass']
+        mqttTopic = config['mqtt']['topic']
+        mqtt_address = ft.Text(mqttServer)
+        mqtt_port = ft.Text(mqttPort)
+        mqtt_topic = ft.Text(mqttTopic)
+        mqtt_auth = ft.Text(config['mqtt']['auth'])
+        mqtt_user = ft.Text(mqttUser)
+        mqtt_pass = ft.Text(mqttPasswd)
+        if mqttAuth:
+            mqtt_table = ft.DataTable(
+                columns=[
+                    ft.DataColumn(ft.Text("parameter")),
+                    ft.DataColumn(ft.Text("value")),
+                ],
+                rows=[
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text('アドレス')),
+                            ft.DataCell(mqtt_address),
+                        ],
+                    ),
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text('ポート番号')),
+                            ft.DataCell(mqtt_port),
+                        ],
+                    ),
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text('トピック')),
+                            ft.DataCell(mqtt_topic),
+                        ],
+                    ),
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text('認証')),
+                            ft.DataCell(mqtt_auth),
+                        ],
+                    ),
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text('認証ユーザ')),
+                            ft.DataCell(mqtt_user),
+                        ],
+                    ),
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text('パスフレーズ')),
+                            ft.DataCell(mqtt_pass),
+                        ],
+                    ),
+                ],
+            )
+        else:
+            mqtt_table = ft.DataTable(
+                columns=[
+                    ft.DataColumn(ft.Text("parameter")),
+                    ft.DataColumn(ft.Text("value")),
+                ],
+                rows=[
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text('アドレス')),
+                            ft.DataCell(mqtt_address),
+                        ],
+                    ),
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text('ポート番号')),
+                            ft.DataCell(mqtt_port),
+                        ],
+                    ),
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text('トピック')),
+                            ft.DataCell(mqtt_topic),
+                        ],
+                    ),
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text('認証')),
+                            ft.DataCell(mqtt_auth),
+                        ],
+                    ),
+                ],
+            )
+        lv.controls.append(subTitle1)
+        lv.controls.append(mqtt_table)
+        lv.controls.append(line)
+
+        subTitle2 = ft.Text("Arduinoクラウド - Thing定義.", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        thing_table = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("parameter")),
+                ft.DataColumn(ft.Text("value")),
+            ],
+            rows=[
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text('ID')),
+                        ft.DataCell(ft.Text(config['arduino']['id'])),
+                    ],
+                ),
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text('SECRET KEY')),
+                        ft.DataCell(ft.Text(config['arduino']['key'])),
+                    ],
+                ),
+            ],
+        )
+        lv.controls.append(subTitle2)
+        lv.controls.append(thing_table)
+        lv.controls.append(line)
+
+        subTitle3 = ft.Text("データ関連定義.", style=ft.TextThemeStyle.TITLE_MEDIUM)
+
+        tmpArray = []
+        for i in range(len(config['mapping'])):
+            tmpRow = ft.DataRow(
+                cells=[
+                    ft.DataCell(ft.Text(str(config['mapping'][i]['label']))),
+                    ft.DataCell(ft.Text(config['mapping'][i]['topic'])),
+                    ft.DataCell(ft.Text(config['mapping'][i]['sensorID'])),
+                    ft.DataCell(ft.Text(config['mapping'][i]['sensorType'])),
+                ],
+            )
+            tmpArray.append(tmpRow)
+        mapping_table = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("data label")),
+                ft.DataColumn(ft.Text("mqtt topic")),
+                ft.DataColumn(ft.Text("sensor ID"), numeric=True),
+                ft.DataColumn(ft.Text("sensor type")),
+            ],
+            rows=tmpArray,
+        )
+        lv.controls.append(subTitle3)
+        lv.controls.append(mapping_table)
+        
+        helpPageName = 'configParams'
+
+        return ft.View("/view20", [
+            appBar,
+            row,
+            lv
+        ])
+
+    def createView30():
+        global helpPageName, mqttClient
+        def outputLog(msg):
+            global msgBuffMaxSize, msgBuff
+            if len(msgBuff) > msgBuffMaxSize:
+                msgBuff.pop(0)
+                lv.controls.pop(0)
+            msgBuff.append(msg)
+            tmp = ft.Text(msg)
+            lv.controls.append(tmp)
+            page.update()
+
+        def mqttOnConnect(client, userdata, flag, result, properties):
+            global mqttTopic
+            outputLog('mqtt broker connection established.')
+            outputLog('subscribe to mqtt broker using topic ' + mqttTopic)
+            mqttClient.subscribe(mqttTopic)
+
+        def mqttOnConnectFail(client, userdata):
+            outputLog('retry to connect...')
+            mqttClient.reconnect()
+
+        def mqttOnDisconnect(client, userdata, disconnect_flags, reason_code, properties):
+            global mqttClient
+            outputLog('mqtt connection terminated.')
+            outputLog('retry to connect...')
+            mqttClient.reconnect()
+
+        def mqttOnMessage(client, userdata, msg):
+            message = msg.payload.decode()
+            json_data = json.loads(message)
+            dataStr = sensorData_to_str(msg.topic, json_data)
+            outputLog(dataStr)
+            rst = processData(msg.topic, json_data)
+            if rst != '':
+                outputLog('error : ' + rst)
+
+        def initMqtt():
+            global apiVersion, mqttClient, mqttTimeout, mqttServer, mqttPort, mqttAuth, mqttUser, mqttPasswd
+            mqttClient = mqtt_client.Client(apiVersion)
+            mqttClient.on_connect = mqttOnConnect
+            mqttClient.on_disconnect = mqttOnDisconnect
+            mqttClient.on_message = mqttOnMessage
+            mqttClient.on_connect_fail = mqttOnConnectFail
+            if mqttAuth:
+                mqttClient.username = mqttUser
+                mqttClient.password = mqttPasswd
+            outputLog('setting up mqtt connection to broker, address - ' + mqttServer + ' , port - ' + str(mqttPort) + ' , timeout - ' + str(mqttTimeout))
+            mqttClient.connect(mqttServer, mqttPort, mqttTimeout)
+            mqttClient.loop_start()
+
+        def initArduino():
+            global config, arduinoClient
+            key = config['arduino']['key']
+            id = config['arduino']['id']
+            arduinoClient = ArduinoCloudClient(device_id=id, username=id, password=key)
+            for i in range(len(config['mapping'])):
+                for j in range(len(config['mapping'][i]['label'])):
+                    arduinoClient.register(config['mapping'][i]['label'][j])
+            arduinoClient.start()
+
+        def exec_button_clicked(e):
+            exec_button.disabled=True
+            initMqtt()
+            page.update()
+            initArduino()
+
+        appBar = ft.AppBar(
+                title=ft.Text("Relay sensor data"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        exec_button = ft.ElevatedButton(text="exec", on_click=exec_button_clicked)
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+                [
+                    exec_button,
+                    finish_button
+                ]
+            )
+        line = ft.Divider(height=2, color="black")
+        helpPageName = 'relay'
+        return ft.View("/view30", [
+            appBar,
+            row,
+            line,
+            lv
+        ])
+
+    def route_change(handler):
+        troute = ft.TemplateRoute(handler.route)
+        page.views.clear()
+        if troute.match("/view10"):
+            page.views.append(createView10())
+        elif troute.match("/view20"):
+            page.views.append(createView20())
+        elif troute.match("/view30"):
+            page.views.append(createView30())
+    page.on_route_change = route_change
+    page.title = "Sensor data relay from Mqtt to Arduino cloud."
+    page.go("/view10")
+
+if __name__ == "__main__":
+    [error, help] = load_init_file(help_file_name)
+    if "" == error:
+        ft.app(target=mainWindow)
+    else:
+        ft.app(target=errorWindow)
+

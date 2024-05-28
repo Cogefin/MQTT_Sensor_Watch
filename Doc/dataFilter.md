@@ -36,7 +36,7 @@
 なお，センサIDは-1を選択した場合，センサIDは無視して抽出処理を行う．
 
 <div style="text-align: center;">
-<img src="images/dataFilter_センサ選択.png" width="80%">
+<img src="images/dataFilter_センサ選択.png" width="40%">
 </div>
 
 

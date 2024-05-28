@@ -1,0 +1,987 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[ ]:
+
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from flet_multi_page import subPage
+import flet as ft
+import os
+import json
+import yaml
+
+
+help_file="Help/defineMqttToAnbient.yaml"
+
+timeout = 60
+apiVersion = mqtt_client.CallbackAPIVersion.VERSION2
+
+
+sensorTypeText = {
+    'ACCELEROMETER'         : '3軸加速度' ,
+    'GYROSCOPE'             : '3軸ジャイロ' ,
+    'LIGHT'                 : '光センサ' ,
+    'PRESSURE'              : '気圧センサ' ,
+    'LINEAR_ACCELERATION'   : '1軸リニア加速度' ,
+    'RELATIVE_HUMIDITY'     : '湿度' ,
+    'AMBIENT_TEMPERATURE'   : '気温' ,
+    'CURRENT'               : '電流' ,
+    'COLOR'                 : '色彩' ,
+    'SIMPLE'                : '単純デジタルセンサ' ,
+    'ANGLE'                 : '角度' ,
+    'ONE_AXIS_GYRO'         : '1軸ジャイロ' ,
+    'DISTANCE'              : '距離' ,
+    'DUST'                  : 'ホコリセンサ' ,
+    'POSITION'              : '位置センサ' ,
+    'SPEED_KNOT'            : '速度(ノット)' ,
+    'SIMPLE_ANALOG'         : '単純アナログセンサ'
+}
+
+sensorTypeName = [
+    'ACCELEROMETER',
+    'GYROSCOPE',
+    'LIGHT',
+    'PRESSURE',
+    'LINEAR_ACCELERATION',
+    'RELATIVE_HUMIDITY',
+    'AMBIENT_TEMPERATURE',
+    'CURRENT',
+    'COLOR',
+    'SIMPLE',
+    'ANGLE',
+    'ONE_AXIS_GYRO',
+    'DISTANCE',
+    'DUST',
+    'POSITION',
+    'SPEED_KNOT',
+    'SIMPLE_ANALOG'
+]
+
+
+def loadHelp(helpFile):
+    global help
+    try:
+        with open(helpFile, mode='r', encoding='utf-8') as f:
+            help = yaml.safe_load(f)
+    except Exception as e:
+        return "Exception occurred while loading custom platform definition YAML file..."
+    return ""
+
+def icon_clicked(e):
+    global helpPageName
+    p = subPage(
+        controls=[
+            ft.Markdown(
+                help[helpPageName],
+                selectable=True,
+                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            )
+        ],
+        page_props={"window_width":800},
+    )
+    p.start()
+
+
+def errorWindow(page: ft.Page):
+    global error
+    page.title = "Error"
+    page.window_width = 400
+    page.window_height = 500
+    page.autoscroll = True
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    page.add(
+        ft.AppBar(title=ft.Text("Error"),
+        bgcolor=ft.colors.RED),
+    )
+    page.add(
+        ft.Text(error)
+    )
+    page.add(
+        ft.Divider(height=2, color="black")
+    )
+    page.add(finish_button)
+
+
+
+mqtt_broker = ''
+mqtt_port = 0
+mqtt_topic = ''
+mqtt_auth = False
+mqtt_auth_str = ''
+mqtt_user = ''
+mqtt_pass = ''
+
+anbientChannel = []
+anbientDataLabel = []
+
+mappingDefinition = []
+
+output_file_name = ''
+
+def saveConfig(output_file_name):
+    global mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_user, mqtt_pass, anbientChannel, mappingDefinition
+    # 出力ファイルのオープン
+    try:
+        output_file = open(output_file_name, mode='w', encoding='utf-8')
+    except Exception as e1:
+        return "Error : Exception occurred at opening output file..."
+    # MQTT関連パラメータ
+    print('mqtt:', file=output_file)
+    print('  address: %s # MQTTブローカアドレス' % mqtt_broker, file=output_file)
+    print('  port: %s # MQTTブローカポート番号' % mqtt_port, file=output_file)
+    print('  topic: %s # MQTTトピック' % mqtt_topic, file=output_file)
+    if mqtt_auth:
+        print('  auth: True # True 認証する, False 認証しない', file=output_file)
+    else:
+        print('  auth: False # True 認証する, False 認証しない', file=output_file)
+    print('  user: %s # MQTT認証ユーザ名' % mqtt_user, file=output_file)
+    print('  pass: %s # MQTT認証パスフレーズ' % mqtt_pass, file=output_file)
+    print('mapping:', file=output_file)
+    for i in range(len(mappingDefinition)):
+        channel = anbientChannel[i][0].value
+        key     = anbientChannel[i][1].value
+        for j in range(len(mappingDefinition[i])):
+            label = mappingDefinition[i][j][0]
+            topic = mappingDefinition[i][j][1].value
+            sensorID = mappingDefinition[i][j][2].value
+            sensorType = mappingDefinition[i][j][3].value
+            mapping_info = ' - { channel: ' + channel + ', key: ' + key + ', label: ' + label + ', topic: ' + topic + ', sensorID: ' + sensorID + ', sensorType: ' + sensorType + ' }'
+            print(mapping_info, file=output_file)
+    output_file.close()
+    return "write to file... done."
+
+
+def mainWindow(page: ft.Page):
+    def createView10():
+        global helpPageName, mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str
+        def checkTrueFalse(val):
+            if val == "TRUE" or val=="True" or val == "true" or val == "yes" or val == "Yes" or val == "YES":
+                return True
+            return False
+        def next_button_clicked(e):
+            global mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str
+            mqtt_broker = serverAddress.value
+            mqtt_port = mqttPort.value
+            mqtt_topic = mqttTopic.value
+            if mqtt_auth_str == '' or str(mqtt_broker) == '' or str(mqtt_port) == '' or str(mqtt_topic) == '':
+                msg.value = "Please input mqtt parameter."
+                msg.update()
+            else:
+                page.go("/view20")
+        def dropdown_changed(e):
+            global mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str
+            #print("changed.")
+            mqtt_auth = checkTrueFalse(mqttAuth.value)
+            mqtt_auth_str = 'done'
+        page.window_width = 500
+        page.window_height = 700
+        serverAddress = ft.TextField(label="IP address or FQDN")
+        if mqtt_broker != '':
+            serverAddress.value = mqtt_broker
+        mqttPort = ft.TextField(label="MQTT port number")
+        if mqtt_port != 0:
+            mqttPort.value = mqtt_port
+        mqttTopic = ft.TextField(label="MQTT topic")
+        if mqtt_topic != '':
+            mqttTopic.value = mqtt_topic
+        mqttAuth = ft.Dropdown(
+            width=250,
+            on_change=dropdown_changed,
+            options=[
+                ft.dropdown.Option(key=True, text="Yes"),
+                ft.dropdown.Option(key=False, text="No"),
+            ],
+            label = "Use authentication"
+        )
+        if mqtt_auth_str != '':
+            mqttAuth.value = mqtt_auth
+        msg = ft.Text()
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        line = ft.Divider(height=2, color="black")
+        helpPageName = 'mqttGeneral'
+        return ft.View("/view10", [
+            ft.AppBar(
+                title=ft.Text("MQTT設定"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            nextButton,
+            msg,
+            line,
+            ft.Text("MQTTブローカアドレス", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            serverAddress,
+            line,
+            ft.Text("MQTTブローカポート番号", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            mqttPort,
+            line,
+            ft.Text("MQTTトピック", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            mqttTopic,
+            line,
+            ft.Text("MQTT認証の使用", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            mqttAuth
+        ])
+
+    def createView20():
+        global helpPageName, mqtt_user, mqtt_pass, anbientChannel
+        def next_button_clicked(e):
+            global mqtt_user, mqtt_pass
+            mqtt_user = userName.value
+            mqtt_pass = userPass.value
+            if 0 < len(anbientChannel):
+                page.go("/view32")
+            else:
+                page.go("/view30")
+        userName = ft.TextField(label="MQTT user name")
+        if mqtt_user != '':
+            userName.value = mqtt_user
+        userPass = ft.TextField(label="MQTT pass phrase")
+        if mqtt_pass != '':
+            userPass.value = mqtt_pass
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        line = ft.Divider(height=2, color="black")
+        helpPageName = 'mqttAuth'
+        return ft.View("/view20", [
+            ft.AppBar(
+                title=ft.Text("MQTT認証情報"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            nextButton,
+            line,
+            ft.Text("MQTTユーザ名", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            userName,
+            line,
+            ft.Text("MQTTパスワード", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            userPass
+        ])
+
+    def createView30():
+        global helpPageName, anbientChannel
+        def check_anbientChannel():
+            for i in range(len(anbientChannel)):
+                if ("" == anbientChannel[i][0]) or ("" == anbientChannel[i][1]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_anbientChannel():
+                warning_area.value = "チャンネル定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view40")
+        def add_button_clicked(e):
+            if check_anbientChannel():
+                warning_area.value = "チャンネル定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view31")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(anbientChannel)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                anbientChannel.pop(num)
+                page.go("/view32")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(anbientChannel)):
+                deleteChanndelButton.disabled=False
+                page.update()
+            else:
+                deleteChanndelButton.disabled=True
+                page.update()
+        def enebleAddButton(e):
+            if (channdelID.value == '') or (writeKey.value == ''):
+                addChannelButton.disabled=True
+                nextButton.disabled=True
+            else:
+                addChannelButton.disabled=False
+                nextButton.disabled=False
+            page.update()
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("Anbientチャンネル定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=True)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addChannelButton = ft.ElevatedButton("add channel", on_click=add_button_clicked, disabled=True)
+        deleteChanndelButton = ft.ElevatedButton("delete channel", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteChanndelButton
+            ]
+        )
+        subTitle1 = ft.Text("チャンネル定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(anbientChannel)):
+            targetNum = ft.Text(str(i+1))
+            channdelID = anbientChannel[i][0]
+            writeKey = anbientChannel[i][1]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    channdelID,
+                    writeKey
+                ]
+            )
+            lv.controls.append(row3)
+        targetNum = ft.Text(str(len(anbientChannel)+1))
+        channdelID = ft.TextField(label="channdel ID")
+        writeKey = ft.TextField(label="write key", on_change=enebleAddButton)
+        anbientChannel.append([channdelID,writeKey])
+        row3 = ft.Row(
+            [
+                targetNum,
+                channdelID,
+                writeKey
+            ]
+        )
+        lv.controls.append(row3)
+        helpPageName = 'anbientChannel'
+        return ft.View("/view30", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addChannelButton,
+            row2,
+            lv
+        ])
+
+    def createView31():
+        global helpPageName, anbientChannel
+        def check_anbientChannel():
+            for i in range(len(anbientChannel)):
+                if ("" == anbientChannel[i][0]) or ("" == anbientChannel[i][1]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_anbientChannel():
+                warning_area.value = "チャンネル定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view40")
+        def add_button_clicked(e):
+            if check_anbientChannel():
+                warning_area.value = "チャンネル定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view30")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(anbientChannel)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                anbientChannel.pop(num)
+                page.go("/view32")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(anbientChannel)):
+                deleteChanndelButton.disabled=False
+                page.update()
+            else:
+                deleteChanndelButton.disabled=True
+                page.update()
+        def enebleAddButton(e):
+            if (channdelID.value == '') or (writeKey.value == ''):
+                addChannelButton.disabled=True
+                nextButton.disabled=True
+            else:
+                addChannelButton.disabled=False
+                nextButton.disabled=False
+            page.update()
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("Anbientチャンネル定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=True)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addChannelButton = ft.ElevatedButton("add channel", on_click=add_button_clicked, disabled=True)
+        deleteChanndelButton = ft.ElevatedButton("delete channel", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteChanndelButton
+            ]
+        )
+        subTitle1 = ft.Text("チャンネル定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(anbientChannel)):
+            targetNum = ft.Text(str(i+1))
+            channdelID = anbientChannel[i][0]
+            writeKey = anbientChannel[i][1]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    channdelID,
+                    writeKey
+                ]
+            )
+            lv.controls.append(row3)
+        targetNum = ft.Text(str(len(anbientChannel)+1))
+        channdelID = ft.TextField(label="channdel ID")
+        writeKey = ft.TextField(label="write key", on_change=enebleAddButton)
+        anbientChannel.append([channdelID,writeKey])
+        row3 = ft.Row(
+            [
+                targetNum,
+                channdelID,
+                writeKey
+            ]
+        )
+        lv.controls.append(row3)
+        helpPageName = 'anbientChannel'
+        return ft.View("/view31", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addChannelButton,
+            row2,
+            lv
+        ])
+
+    def createView32():
+        global helpPageName, anbientChannel
+        def check_anbientChannel():
+            for i in range(len(anbientChannel)):
+                if ("" == anbientChannel[i][0]) or ("" == anbientChannel[i][1]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_anbientChannel():
+                warning_area.value = "チャンネル定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view40")
+        def add_button_clicked(e):
+            if check_anbientChannel():
+                warning_area.value = "チャンネル定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view30")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(anbientChannel)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                anbientChannel.pop(num)
+                page.go("/view33")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(anbientChannel)):
+                deleteChanndelButton.disabled=False
+                page.update()
+            else:
+                deleteChanndelButton.disabled=True
+                page.update()
+        def enebleAddButton(e):
+            if (channdelID.value == '') or (writeKey.value == ''):
+                addChannelButton.disabled=True
+                nextButton.disabled=True
+            else:
+                addChannelButton.disabled=False
+                nextButton.disabled=False
+            page.update()
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("Anbientチャンネル定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addChannelButton = ft.ElevatedButton("add channel", on_click=add_button_clicked, disabled=False)
+        deleteChanndelButton = ft.ElevatedButton("delete channel", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteChanndelButton
+            ]
+        )
+        subTitle1 = ft.Text("チャンネル定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(anbientChannel)):
+            targetNum = ft.Text(str(i+1))
+            channdelID = anbientChannel[i][0]
+            writeKey = anbientChannel[i][1]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    channdelID,
+                    writeKey
+                ]
+            )
+            lv.controls.append(row3)
+        helpPageName = 'anbientChannel'
+        return ft.View("/view32", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addChannelButton,
+            row2,
+            lv
+        ])
+
+    def createView33():
+        global helpPageName, anbientChannel
+        def check_anbientChannel():
+            for i in range(len(anbientChannel)):
+                if ("" == anbientChannel[i][0]) or ("" == anbientChannel[i][1]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_anbientChannel():
+                warning_area.value = "チャンネル定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view40")
+        def add_button_clicked(e):
+            if check_anbientChannel():
+                warning_area.value = "チャンネル定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view30")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(anbientChannel)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                anbientChannel.pop(num)
+                page.go("/view32")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(anbientChannel)):
+                deleteChanndelButton.disabled=False
+                page.update()
+            else:
+                deleteChanndelButton.disabled=True
+                page.update()
+        def enebleAddButton(e):
+            if (channdelID.value == '') or (writeKey.value == ''):
+                addChannelButton.disabled=True
+                nextButton.disabled=True
+            else:
+                addChannelButton.disabled=False
+                nextButton.disabled=False
+            page.update()
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("Anbientチャンネル定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addChannelButton = ft.ElevatedButton("add channel", on_click=add_button_clicked, disabled=False)
+        deleteChanndelButton = ft.ElevatedButton("delete channel", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteChanndelButton
+            ]
+        )
+        subTitle1 = ft.Text("チャンネル定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(anbientChannel)):
+            targetNum = ft.Text(str(i+1))
+            channdelID = anbientChannel[i][0]
+            writeKey = anbientChannel[i][1]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    channdelID,
+                    writeKey
+                ]
+            )
+            lv.controls.append(row3)
+        helpPageName = 'anbientChannel'
+        return ft.View("/view33", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addChannelButton,
+            row2,
+            lv
+        ])
+
+    def createView40():
+        global helpPageName, anbientChannel, anbientDataLabel
+        def checkBoxStatus():
+            flag = False
+            for i in range(len(anbientDataLabel)):
+                for j in range(8):
+                    flag = flag or anbientDataLabel[i][j]
+                if flag == False:
+                    return True
+            return False
+        def next_button_clicked(e):
+            if checkBoxStatus():
+                nextButton.disabled = True
+                warning_area.value = "各チャンネルにおいて1つ以上のデータラベルを有効にしてください．"
+                page.update()
+            else:
+                page.go("/view50")
+        def checkBoxChange(e):
+            if checkBoxStatus():
+                nextButton.disabled = True
+            else:
+                nextButton.disabled = False
+            page.update()
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("利用データラベル選択"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=True)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row([nextButton,finishButton])
+        subTitle1 = ft.Text("利用するデータラベルを選択してください．", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        warning_area = ft.Text("")
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(anbientChannel)):
+            channelNumber = ft.Text(str(i+1) + ". ")
+            channelID = ft.Text("チャンネルID : " + str(anbientChannel[i][0].value))
+            d1 = ft.Checkbox(label="d1", value=False, on_change=checkBoxChange)
+            d2 = ft.Checkbox(label="d2", value=False, on_change=checkBoxChange)
+            d3 = ft.Checkbox(label="d3", value=False, on_change=checkBoxChange)
+            d4 = ft.Checkbox(label="d4", value=False, on_change=checkBoxChange)
+            d5 = ft.Checkbox(label="d5", value=False, on_change=checkBoxChange)
+            d6 = ft.Checkbox(label="d6", value=False, on_change=checkBoxChange)
+            d7 = ft.Checkbox(label="d7", value=False, on_change=checkBoxChange)
+            d8 = ft.Checkbox(label="d8", value=False, on_change=checkBoxChange)
+            tmp = [d1,d2,d3,d4,d5,d6,d7,d8]
+            anbientDataLabel.append(tmp)
+            row1 = ft.Row([channelNumber,channelID])
+            row2 = ft.Row([d1,d2,d3,d4])
+            row3 = ft.Row([d5,d6,d7,d8])
+            lv.controls.append(row1)
+            lv.controls.append(row2)
+            lv.controls.append(row3)
+            lv.controls.append(line)
+        helpPageName = 'anbientChannelDataLabel'
+        return ft.View("/view40", [
+            appBar,
+            row,
+            warning_area,
+            line,
+            subTitle1,
+            lv
+        ])
+
+    def createView50():
+        global helpPageName, anbientChannel, anbientDataLabel, mappingDefinition
+        def checkMapping():
+            global mappingDefinition
+            for i in range(len(mappingDefinition)):
+                for j in range(len(mappingDefinition[i])):
+                    if (mappingDefinition[i][j][1].value == "") or (mappingDefinition[i][j][3].value == None ):
+                        return True
+            return False
+        def next_button_clicked(e):
+            if checkMapping():
+                warning_area.value = "Anbientとセンサのマッピングで未定義のところが残っています．"
+                page.update()
+            else:
+                page.go("/view60")
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("Anbientとセンサのマッピング"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row([nextButton,finishButton])
+        subTitle1 = ft.Text("Anbientとセンサの対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        warning_area = ft.Text("")
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(anbientDataLabel)):
+            mappingDefinition.append([])
+            for j in range(8):
+                if anbientDataLabel[i][j].value == True:
+                    anbient = ft.Text("Anbient channel ID : " + str(anbientChannel[i][0].value) + " , data label : d" + str(j+1) )
+                    topic = ft.TextField(label="MQTT topic")
+                    sensorID = ft.TextField(label="Sensor ID" , value = "-1")
+                    sensorType = ft.Dropdown(
+                        label="センサタイプ",
+                        autofocus=True,
+                    )
+                    for k in range(len(sensorTypeName)):
+                        sensorType.options.append(ft.dropdown.Option(key = sensorTypeName[k], text = sensorTypeText[sensorTypeName[k]]))
+                    tmp = [
+                        "d"+str(j+1),
+                        topic,
+                        sensorID,
+                        sensorType
+                    ]
+                    mappingDefinition[i].append(tmp)
+                    lv.controls.append(anbient)
+                    lv.controls.append(topic)
+                    lv.controls.append(sensorID)
+                    lv.controls.append(sensorType)
+                    lv.controls.append(line)
+        helpPageName = 'mappingDefinition'
+        return ft.View("/view50", [
+            appBar,
+            row,
+            warning_area,
+            line,
+            subTitle1,
+            lv
+        ])
+
+    def createView60():
+        global mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str, mqtt_user, mqtt_pass, anbientChannel, mappingDefinition
+        def next_button_clicked(e):
+            page.go("/view70")
+        def back_button_clicked(e):
+            page.go("/view10")
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("各種定義の確認"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        backButton = ft.ElevatedButton("Back", on_click=back_button_clicked)
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+            [
+                nextButton,
+                backButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        # MQTTブローカ関連
+        subTitle1 = ft.Text("MQTTブローカとの接続関連", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        broker  = ft.Text("アドレス   : " + mqtt_broker)
+        portNum = ft.Text("ポート番号 : " + mqtt_port)
+        topic   = ft.Text("トピック   : " + mqtt_topic)
+        lv.controls.append(subTitle1)
+        lv.controls.append(broker)
+        lv.controls.append(portNum)
+        lv.controls.append(topic)
+        if mqtt_auth:
+            auth     = ft.Text("MQTT認証   : 行う")
+            userName = ft.Text("認証ユーザ : " + mqtt_user)
+            userPass = ft.Text("認証パス   : " + mqtt_pass)
+            lv.controls.append(auth)
+            lv.controls.append(userName)
+            lv.controls.append(userPass)
+        else:
+            auth    = ft.Text("MQTT認証   : 行わない")
+            lv.controls.append(auth)
+        lv.controls.append(line)
+        # Anbient, MQTT対応定義
+        subTitle2 = ft.Text("Anbientとセンサの対応", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        for i in range(len(mappingDefinition)):
+            channel = anbientChannel[i][0].value
+            key     = anbientChannel[i][1].value
+            for j in range(len(mappingDefinition[i])):
+                label = mappingDefinition[i][j][0]
+                topic = mappingDefinition[i][j][1].value
+                sensorID = mappingDefinition[i][j][2].value
+                sensorType = mappingDefinition[i][j][3].value
+                anbient_info = ft.Text("Anbientチャンネル : " + channel + " , write Key : " + key + " , データ系列 : " + label)
+                sensor_info  = ft.Text("MQTTトピック : " + topic + " , センサID : " + sensorID + " , センサタイプ : " + sensorType)
+                lv.controls.append(anbient_info)
+                lv.controls.append(sensor_info)
+                lv.controls.append(line)
+        helpPageName = 'mappingCheck'
+        return ft.View("/view60", [
+            appBar,
+            row,
+            warning_area,
+            line,
+            subTitle1,
+            lv
+        ])
+
+    def createView70():
+        def output_button_clicked(e):
+            if (output_file_name=="") or (output_file_name=="Canceled."):
+                warning_area.value = "Please select output file."
+                warning_area.update()
+                return
+            warning_area.value = saveConfig(output_file_name)
+            warning_area.update()
+        def pick_output_file_result(e: ft.FilePickerResultEvent):
+            global output_file_name
+            selected_output_file.value = e.path
+            output_file_name = selected_output_file.value
+            selected_output_file.update()
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("定義ファイルの出力"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        finish_button = ft.ElevatedButton(text="Finish", on_click=lambda e: page.window_destroy())
+        line = ft.Divider(height=2, color="black")
+        outputButton = ft.ElevatedButton("File output", on_click=output_button_clicked)
+        warning_area = ft.Text("")
+        subTitle = ft.Text('出力ファイル選択', size=24)
+        description = ft.Text('出力ファイルを指定してください．')
+        pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
+        page.overlay.append(pick_output_file_dialog)
+        output_file_button = ft.ElevatedButton(
+                "output file",
+                icon=ft.icons.DOWNLOAD,
+                on_click=lambda _: pick_output_file_dialog.save_file(
+                ),
+            )
+        selected_output_file = ft.Text()
+        selected_output_file.value = output_file_name
+        helpPageName = 'fileOutput'
+        return ft.View("/view70", [
+            appBar,
+            finish_button,
+            line,
+            subTitle,
+            description,
+            output_file_button,
+            selected_output_file,
+            line,
+            outputButton,
+            warning_area
+        ])
+
+    def route_change(handler):
+        troute = ft.TemplateRoute(handler.route)
+        page.views.clear()
+        if troute.match("/view10"):
+            page.views.append(createView10())
+        elif troute.match("/view20"):
+            if mqtt_auth_str == 'done' and str(mqtt_auth) == "False":
+                page.go("/view30")
+            else:
+                page.views.append(createView20())
+        elif troute.match("/view30"):
+            page.views.append(createView30())
+        elif troute.match("/view31"):
+            page.views.append(createView31())
+        elif troute.match("/view32"):
+            page.views.append(createView32())
+        elif troute.match("/view33"):
+            page.views.append(createView33())
+        elif troute.match("/view40"):
+            page.views.append(createView40())
+        elif troute.match("/view50"):
+            page.views.append(createView50())
+        elif troute.match("/view60"):
+            page.views.append(createView60())
+        elif troute.match("/view70"):
+            page.views.append(createView70())
+    page.on_route_change = route_change
+    page.title = "defineMqttToAnbient"
+    page.go("/view10")
+
+
+if __name__ == '__main__':
+    # sample parameter
+    # mqtt_broker = '10.116.63.186'
+    # mqtt_port = 1883
+    # mqtt_topic = 'arduino/echo'
+    error = loadHelp(help_file)
+    if error != "":
+        ft.app(target=errorWindow)
+    else:
+        ft.app(target=mainWindow)
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+

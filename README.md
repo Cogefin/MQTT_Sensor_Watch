@@ -3,12 +3,16 @@
 このプログラム群は，[Gen_arduino_mqtt](https://github.com/masaaki-noro/Gen_arduino_mqtt)で生成されたArduino用プログラムで
 動作する，Arduinoを使ったセンサ端末が発信するセンサデータを可視化するためのものである．
 
-このプログラムでは，下図のシステムにおけるWebサーバに配置するHTMLファイル(+Javascriptプログラム)を生成するためのものである．
+プログラム群は大きく分けて，MQTTブローカから取得したセンサデータをローカルに保存し，自前のwebサーバで可視化するものと，
+MQTTブローカから取得したデータをクラウドサービス(Arduino Cloud等)にアップロードするものに分けられる．
+
 <div style="text-align: center;">
 <img src="Doc/images/可視化環境イメージ.png" width="80%">
 </div>
 
-このプログラムの出力であるWebページでは，下図のようやセンサデータの時系列グラフや度数分布のグラフ，統計値(中央値，平均値等)や複数のセンサデータ(例えば気温と湿度)の間の相関係数を自動的に計算して表示する．
+また，ローカルで可視化するために必要なHTML(+Javascript)ファイルを合成するプログラムも含まれている．
+
+ローカルでの可視化で用いるWebページでは，下図のようやセンサデータの時系列グラフや度数分布のグラフ，統計値(中央値，平均値等)や複数のセンサデータ(例えば気温と湿度)の間の相関係数を自動的に計算して表示することができる．
 
 <div style="text-align: center;">
 <img src="Doc/images/加速度可視化ページトップ.png" width="80%">
@@ -30,7 +34,7 @@
 
 ### 利用しているPythonライブラリ
 
-以下のライブラリを使っています．
+以下のライブラリを使っている．
 - sqlite3
 - csv
 - flet_multi_page
@@ -43,10 +47,18 @@
 - os
 - paho.mqtt
 - json
+- datetime
+- requests
+- ambient
+  
+上のリストの最後の2つはセンサデータをクラウドサービスにアップロードするために用いるものであるため，
+ローカルでの可視化しか行わない場合は，インストールする必要はない．``requests``はGoogleスプレッドシートに
+アップロードするためのもので，``anbient``は「IoT可視化サービス(https://ambidata.io/)」にアップロードするための
+ライブラリである．なお，``anbient``ライブラリは[ここ](https://ambidata.io/refs/python/)を参照してインストールする必要がある．
 
 以下のプログラムを自分のPython環境で実行し，エラーが出なければ大丈夫ですが，
-インストールしていないライブラリがあれば，エラーがでるので，pipやanacondaで
-ライブラリをインストールしておいてください．
+インストールしていないライブラリがあれば，エラーがでるので，pipやanacondaでエラーが無くなるまで
+必要なライブラリをインストールすること．
 ```
 import sqlite3
 import csv
@@ -60,12 +72,15 @@ import sys
 import os
 import paho.mqtt
 import json
+import datetime
+import requests
+import ambient
 ```
 
 
 ## インストール
 
-ダウンロードしたアーカイブをほどいて，どこかのディレクトリに丸ごとコピーしてください．
+ダウンロードしたアーカイブをほどいて，どこかのディレクトリに丸ごとコピー(もしくは移動)するだけで大丈夫です．
 
 ### Widowsの場合
 
@@ -76,7 +91,7 @@ import json
 shell画面でアーカイブを解いたディレクトリに移動し，以下のコマンドを入力してください．
 
 ```
-$ chmod +x csv_to_sqlite dataFilter defineSensorViewer genSensorViewer mqttListner sqlite_to_csv
+$ chmod +x csv_to_sqlite dataFilter defineSensorViewer genSensorViewer mqttListner sqlite_to_csv mqttToAnbient mqttToArduino mqttToGoogleSP
 ```
 
 
@@ -91,3 +106,5 @@ MacやLinuxの場合は，下のように，shell画面で直接実行してく�
 $ ./csv_to_sqlite
 ```
 
+## 詳細情報
+個別のソフトウェアの詳細は「Doc」ディレクトリ内の各ドキュメントを参照のこと．

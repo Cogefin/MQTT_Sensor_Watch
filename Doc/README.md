@@ -1,7 +1,29 @@
 # mqtt_sensor_watch
 
 ## プログラム構成
-この環境は以下の4種類(7つ)のプログラムから成り立っており，データ抽出以外のプログラムの関係は下の図のような構造になっている．
+システム全体の構成は以下の図のようになっており，MQTTブローカからセンサデータを取得し，クラウドサービスにアップロードする
+プログラムと，取得したデータをローカルに保存し，保存したデータを加工/可視化するプログラムに分かれる．
+<div style="text-align: center;">
+<img src="images/可視化環境イメージ.png" width="80%">
+</div>
+
+## クラウドアップロード用中継プログラム
+データのアップロード先として利用できるクラウドサービスは以下の3種類である．
+
+- Anbient IoT : https://ambidata.io/
+- Googleスプレッドシート : https://www.google.com/intl/ja/sheets/about/
+- Arduinoクラウド : https://cloud.arduino.cc/
+
+それぞれのサービスに対応したデータ中継用プログラムは以下の通り．各プログラムの詳細は，リンクを辿っていただきたい．
+
+- [mqttToAnbient](mqttToAnbient.md)
+- [mqttToArduino](mqttToArduino.md)
+- [mqttToGoogleSP](mqttToGoogleSP.md)
+
+
+## ローカル処理用プログラム
+
+この環境は以下の4種類(6つ)のプログラムから成り立っており，データ抽出以外のプログラムの関係は下の図のような構造になっている．
 各プログラムの詳細は，リンクを辿っていただきたい．
 
 
@@ -25,8 +47,8 @@
 </div>
 
 
-## データ抽出
-7つのプログラムのうち，データ抽出(dataFilter)は，mqttListnerが取得したデータの中から特定の時刻のデータを抽出するために用いる．
+### データ抽出
+6つのプログラムのうち，データ抽出(dataFilter)は，mqttListnerが取得したデータの中から特定の時刻のデータを抽出するために用いる．
 
 dataFilterの動きを表したものが下の図である．
 <div style="text-align: center;">
