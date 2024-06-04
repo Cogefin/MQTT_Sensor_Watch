@@ -1,14 +1,8 @@
 #!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import flet as ft
-from flet_multi_page import subPage
+#from flet_multi_page import subPage
 
 import yaml
 import sys
@@ -390,18 +384,28 @@ def errorWindow(page: ft.Page):
         finish_button)
 
 def icon_clicked(e):
+    ft.app(target=helpWindow)
+    #global helpPageName, help
+    #p = subPage(
+    #    controls=[
+    #       ft.Markdown(
+    #            help[helpPageName],
+    #            selectable=True,
+    #            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+    #        )
+    #    ],
+    #    page_props={"window_width":800},
+    #)
+    #p.start()
+
+def helpWindow(page: ft.Page):
     global help
-    p = subPage(
-        controls=[
-            ft.Markdown(
-                help['top'],
-                selectable=True,
-                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
-            )
-        ],
-        page_props={"window_width":800},
-    )
-    p.start()
+    page.title = "Help"
+    page.window_width = 800
+    page.window_height = 500
+    page.autoscroll = True
+    help_contents = ft.Markdown(help['top'], selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB)
+    page.add(help_contents)
 
 def fileWindow(page: ft.Page):
     def pick_input_file_result(e: ft.FilePickerResultEvent):
@@ -501,16 +505,6 @@ if __name__ == "__main__":
         ft.app(target=fileWindow)
     else:
         ft.app(target=errorWindow)
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
 
 
 

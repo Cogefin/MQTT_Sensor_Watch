@@ -1,13 +1,7 @@
 #!/usr/bin/env python
-# coding: utf-8
-
-# In[2]:
-
-
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from flet_multi_page import subPage
+#from flet_multi_page import subPage
 import flet as ft
 import yaml
 import time
@@ -86,19 +80,29 @@ def loadHelp(helpFile):
         return "Exception occurred while loading custom platform definition YAML file..."
     return ""
 
-def help_icon_clicked(e):
-    global helpPageName
-    p = subPage(
-        controls=[
-            ft.Markdown(
-                help[helpPageName],
-                selectable=True,
-                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
-            )
-        ],
-        page_props={"window_width":800},
-    )
-    p.start()
+def icon_clicked(e):
+    ft.app(target=helpWindow)
+    #global helpPageName, help
+    #p = subPage(
+    #    controls=[
+    #       ft.Markdown(
+    #            help[helpPageName],
+    #            selectable=True,
+    #            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+    #        )
+    #    ],
+    #    page_props={"window_width":800},
+    #)
+    #p.start()
+
+def helpWindow(page: ft.Page):
+    global helpPageName, help
+    page.title = "Help"
+    page.window_width = 800
+    page.window_height = 500
+    page.autoscroll = True
+    help_contents = ft.Markdown(help[helpPageName], selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB)
+    page.add(help_contents)
 
 def errorWindow(page: ft.Page):
     global error
@@ -960,10 +964,4 @@ if __name__ == '__main__':
         ft.app(target=errorWindow)
     else:
         ft.app(target=mainWindow)
-
-
-# In[ ]:
-
-
-
 
