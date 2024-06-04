@@ -1,0 +1,2364 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#from flet_multi_page import subPage
+import flet as ft
+#import os
+#import json
+import yaml
+
+
+help_file="Help/defineMqttToCloud.yaml"
+
+
+sensorTypeText = {
+    'ACCELEROMETER'         : '3軸加速度' ,
+    'GYROSCOPE'             : '3軸ジャイロ' ,
+    'LIGHT'                 : '光センサ' ,
+    'PRESSURE'              : '気圧センサ' ,
+    'LINEAR_ACCELERATION'   : '1軸リニア加速度' ,
+    'RELATIVE_HUMIDITY'     : '湿度' ,
+    'AMBIENT_TEMPERATURE'   : '気温' ,
+    'CURRENT'               : '電流' ,
+    'COLOR'                 : '色彩' ,
+    'SIMPLE'                : '単純デジタルセンサ' ,
+    'ANGLE'                 : '角度' ,
+    'ONE_AXIS_GYRO'         : '1軸ジャイロ' ,
+    'DISTANCE'              : '距離' ,
+    'DUST'                  : 'ホコリセンサ' ,
+    'POSITION'              : '位置センサ' ,
+    'SPEED_KNOT'            : '速度(ノット)' ,
+    'SIMPLE_ANALOG'         : '単純アナログセンサ'
+}
+
+sensorTypeName = [
+    'ACCELEROMETER',
+    'GYROSCOPE',
+    'LIGHT',
+    'PRESSURE',
+    'LINEAR_ACCELERATION',
+    'RELATIVE_HUMIDITY',
+    'AMBIENT_TEMPERATURE',
+    'CURRENT',
+    'COLOR',
+    'SIMPLE',
+    'ANGLE',
+    'ONE_AXIS_GYRO',
+    'DISTANCE',
+    'DUST',
+    'POSITION',
+    'SPEED_KNOT',
+    'SIMPLE_ANALOG'
+]
+
+
+def loadHelp(helpFile):
+    global help
+    try:
+        with open(helpFile, mode='r', encoding='utf-8') as f:
+            help = yaml.safe_load(f)
+    except Exception as e:
+        return "Exception occurred while loading custom platform definition YAML file..."
+    return ""
+
+def icon_clicked(e):
+    ft.app(target=helpWindow)
+    #global helpPageName, help
+    #p = subPage(
+    #    controls=[
+    #       ft.Markdown(
+    #            help[helpPageName],
+    #            selectable=True,
+    #            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+    #        )
+    #    ],
+    #    page_props={"window_width":800},
+    #)
+    #p.start()
+
+def helpWindow(page: ft.Page):
+    global helpPageName, help
+    page.title = "Help"
+    page.window_width = 800
+    page.window_height = 500
+    page.autoscroll = True
+    help_contents = ft.Markdown(help[helpPageName], selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB)
+    page.add(help_contents)
+    
+
+def errorWindow(page: ft.Page):
+    global error
+    page.title = "Error"
+    page.window_width = 400
+    page.window_height = 500
+    page.autoscroll = True
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    page.add(
+        ft.AppBar(title=ft.Text("Error"),
+        bgcolor=ft.colors.RED),
+    )
+    page.add(
+        ft.Text(error)
+    )
+    page.add(
+        ft.Divider(height=2, color="black")
+    )
+    page.add(finish_button)
+
+
+
+mqtt_broker = ''
+mqtt_port = 0
+mqtt_topic = ''
+mqtt_auth = False
+mqtt_auth_str = ''
+mqtt_user = ''
+mqtt_pass = ''
+mqtt_timeout = '60'
+
+#anbientChannel = []
+#anbientDataLabel = []
+anbientInterval = 0
+anbientTimeStamp = 0
+
+arduino_id = ''
+arduino_key = ''
+
+googleTimeStamp = ''
+
+mappingDefinition = []
+
+output_file_name = ''
+
+def saveConfig(output_file_name):
+    global mqtt_broker, mqtt_port, mqtt_topic, mqtt_timeout, mqtt_auth, mqtt_user, mqtt_pass, mappingDefinition, anbientInterval, anbientTimeStamp
+    # 出力ファイルのオープン
+    try:
+        output_file = open(output_file_name, mode='w', encoding='utf-8')
+    except Exception as e1:
+        return "Error : Exception occurred at opening output file..."
+    # MQTT関連パラメータ
+    print('mqtt:', file=output_file)
+    print('  address: %s # MQTTブローカアドレス' % mqtt_broker, file=output_file)
+    print('  port: %s # MQTTブローカポート番号' % mqtt_port, file=output_file)
+    print('  topic: %s # MQTTトピック' % mqtt_topic, file=output_file)
+    print('  timeout: %s # MQTTタイムアウト時間' % mqtt_timeout, file=output_file)
+    if mqtt_auth:
+        print('  auth: True # True 認証する, False 認証しない', file=output_file)
+    else:
+        print('  auth: False # True 認証する, False 認証しない', file=output_file)
+    print('  user: %s # MQTT認証ユーザ名' % mqtt_user, file=output_file)
+    print('  pass: %s # MQTT認証パスフレーズ' % mqtt_pass, file=output_file)
+    # Anbientパラメータ
+    print('anbient:', file=output_file)
+    print('  interval: %s' % anbientInterval, file=output_file)
+    print('  time_stamp: %s' % anbientTimeStamp, file=output_file)
+    # mapping
+    print('mapping:', file=output_file)
+    for i in range(len(mappingDefinition)):
+        channel    = mappingDefinition[i][0].value
+        key        = mappingDefinition[i][1].value
+        label      = mappingDefinition[i][2].value
+        topic      = mappingDefinition[i][3].value
+        sensorID   = mappingDefinition[i][4].value
+        sensorType = mappingDefinition[i][5].value
+        mapping_info = ' - { channel: ' + channel + ', key: ' + key + ', label: [' + label + '] , topic: ' + topic + ', sensorID: ' + sensorID + ', sensorType: ' + sensorType + ' }'
+        print(mapping_info, file=output_file)
+    output_file.close()
+    return "write to file... done."
+
+def saveArduinoConfig(output_file_name):
+    global mqtt_broker, mqtt_port, mqtt_topic, mqtt_timeout, mqtt_auth, mqtt_user, mqtt_pass, arduino_id, arduino_key, mappingDefinition
+    # 出力ファイルのオープン
+    try:
+        output_file = open(output_file_name, mode='w', encoding='utf-8')
+    except Exception as e1:
+        return "Error : Exception occurred at opening output file..."
+    # MQTT関連パラメータ
+    print('mqtt:', file=output_file)
+    print('  address: %s # MQTTブローカアドレス' % mqtt_broker, file=output_file)
+    print('  port: %s # MQTTブローカポート番号' % mqtt_port, file=output_file)
+    print('  topic: %s # MQTTトピック' % mqtt_topic, file=output_file)
+    print('  timeout: %s # MQTTタイムアウト時間' % mqtt_timeout, file=output_file)
+    if mqtt_auth:
+        print('  auth: True # True 認証する, False 認証しない', file=output_file)
+    else:
+        print('  auth: False # True 認証する, False 認証しない', file=output_file)
+    print('  user: %s # MQTT認証ユーザ名' % mqtt_user, file=output_file)
+    print('  pass: %s # MQTT認証パスフレーズ' % mqtt_pass, file=output_file)
+    # Arduino Cloudパラメータ
+    print('arduino:', file=output_file)
+    print('  id: %s' % arduino_id, file=output_file)
+    print('  key: %s' % arduino_key, file=output_file)
+    # センサデータ関連
+    print('mapping:', file=output_file)
+    for i in range(len(mappingDefinition)):
+        label = str(mappingDefinition[i][0].value)
+        topic = mappingDefinition[i][1].value
+        sensorID = mappingDefinition[i][2].value
+        sensorType = mappingDefinition[i][3].value
+        mapping_info = ' - { label: [' + label + '] , topic: ' + topic + ', sensorID: ' + sensorID + ', sensorType: ' + sensorType + ' }'
+        print(mapping_info, file=output_file)
+    output_file.close()
+    return "write to file... done."
+
+def saveGoogleConfig(output_file_name):
+    global mqtt_broker, mqtt_port, mqtt_topic, mqtt_timeout, mqtt_auth, mqtt_user, mqtt_pass, googleTimeStamp, mappingDefinition
+    # 出力ファイルのオープン
+    try:
+        output_file = open(output_file_name, mode='w', encoding='utf-8')
+    except Exception as e1:
+        return "Error : Exception occurred at opening output file..."
+    # MQTT関連パラメータ
+    print('mqtt:', file=output_file)
+    print('  address: %s # MQTTブローカアドレス' % mqtt_broker, file=output_file)
+    print('  port: %s # MQTTブローカポート番号' % mqtt_port, file=output_file)
+    print('  topic: %s # MQTTトピック' % mqtt_topic, file=output_file)
+    print('  timeout: %s # MQTTタイムアウト時間' % mqtt_timeout, file=output_file)
+    if mqtt_auth:
+        print('  auth: True # True 認証する, False 認証しない', file=output_file)
+    else:
+        print('  auth: False # True 認証する, False 認証しない', file=output_file)
+    print('  user: %s # MQTT認証ユーザ名' % mqtt_user, file=output_file)
+    print('  pass: %s # MQTT認証パスフレーズ' % mqtt_pass, file=output_file)
+    # Arduino Cloudパラメータ
+    print('google:', file=output_file)
+    print('  time_stamp: %s' % googleTimeStamp, file=output_file)
+    # センサデータ関連
+    print('mapping:', file=output_file)
+    for i in range(len(mappingDefinition)):
+        key = mappingDefinition[i][0].value
+        label = str(mappingDefinition[i][1].value)
+        topic = mappingDefinition[i][2].value
+        sensorID = mappingDefinition[i][3].value
+        sensorType = mappingDefinition[i][4].value
+        mapping_info = ' - { key: ' + key + ' , label: [' + label + '] , topic: ' + topic + ', sensorID: ' + sensorID + ', sensorType: ' + sensorType + ' }'
+        print(mapping_info, file=output_file)
+    output_file.close()
+    return "write to file... done."
+
+def mainWindow(page: ft.Page):
+    def createView10():
+        global helpPageName, mqtt_broker, mqtt_port, mqtt_topic, mqtt_timeout, mqtt_auth, mqtt_auth_str
+        def checkTrueFalse(val):
+            if val == "TRUE" or val=="True" or val == "true" or val == "yes" or val == "Yes" or val == "YES":
+                return True
+            return False
+        def next_button_clicked(e):
+            global mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str
+            mqtt_broker = serverAddress.value
+            mqtt_port = mqttPort.value
+            mqtt_topic = mqttTopic.value
+            mqtt_timeout = mqttTimeOut.value
+            if mqtt_auth_str == '' or str(mqtt_broker) == '' or str(mqtt_port) == '' or str(mqtt_topic) == '':
+                msg.value = "Please input mqtt parameter."
+                msg.update()
+            else:
+                page.go("/view20")
+        def dropdown_changed(e):
+            global mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str
+            #print("changed.")
+            mqtt_auth = checkTrueFalse(mqttAuth.value)
+            mqtt_auth_str = 'done'
+        page.window_width = 500
+        page.window_height = 750
+        serverAddress = ft.TextField(label="IP address or FQDN")
+        if mqtt_broker != '':
+            serverAddress.value = mqtt_broker
+        mqttPort = ft.TextField(label="MQTT port number")
+        if mqtt_port != 0:
+            mqttPort.value = mqtt_port
+        mqttTopic = ft.TextField(label="MQTT topic")
+        if mqtt_topic != '':
+            mqttTopic.value = mqtt_topic
+        mqttTimeOut = ft.TextField(label="MQTTタイムアウト時間", value = mqtt_timeout)
+        mqttAuth = ft.Dropdown(
+            width=250,
+            on_change=dropdown_changed,
+            options=[
+                ft.dropdown.Option(key=True, text="Yes"),
+                ft.dropdown.Option(key=False, text="No"),
+            ],
+            label = "Use authentication"
+        )
+        if mqtt_auth_str != '':
+            mqttAuth.value = mqtt_auth
+        msg = ft.Text()
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        line = ft.Divider(height=2, color="black")
+        helpPageName = 'mqttGeneral'
+        return ft.View("/view10", [
+            ft.AppBar(
+                title=ft.Text("MQTT設定"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            row,
+            msg,
+            line,
+            ft.Text("MQTTブローカアドレス", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            serverAddress,
+            line,
+            ft.Text("MQTTブローカポート番号", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            mqttPort,
+            line,
+            ft.Text("MQTTトピック", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            mqttTopic,
+            line,
+            ft.Text("MQTT接続タイムアウト時間", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            mqttTimeOut,
+            line,
+            ft.Text("MQTT認証の使用", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            mqttAuth
+        ])
+
+    def createView20():
+        global helpPageName, mqtt_user, mqtt_pass
+        def next_button_clicked(e):
+            global mqtt_user, mqtt_pass
+            mqtt_user = userName.value
+            mqtt_pass = userPass.value
+            page.go("/view100")
+        userName = ft.TextField(label="MQTT user name")
+        if mqtt_user != '':
+            userName.value = mqtt_user
+        userPass = ft.TextField(label="MQTT pass phrase")
+        if mqtt_pass != '':
+            userPass.value = mqtt_pass
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        line = ft.Divider(height=2, color="black")
+        helpPageName = 'mqttAuth'
+        return ft.View("/view20", [
+            ft.AppBar(
+                title=ft.Text("MQTT認証情報"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            row,
+            line,
+            ft.Text("MQTTユーザ名", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            userName,
+            line,
+            ft.Text("MQTTパスワード", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            userPass
+        ])
+
+    def createView100():
+        global helpPageName
+        def next_button_clicked(e):
+            if cloud.value == '0':
+                page.go("/view200")
+            elif cloud.value == '1':
+                page.go("/view300")
+            elif cloud.value == '2':
+                page.go("/view400")
+            else:
+                msg.value = 'Please select cloud service.'
+                page.update()
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        msg = ft.Text()
+        line = ft.Divider(height=2, color="black")
+        subTitle = ft.Text("データのアップロード先クラウドサービスを選択してください．")
+        cloud = ft.Dropdown(
+            width=250,
+            options=[
+                ft.dropdown.Option(key=0, text="Anbient"),
+                ft.dropdown.Option(key=1, text="Arduino"),
+                ft.dropdown.Option(key=2, text="Google SpreadSheet"),
+            ],
+            label = "IoT cloud service"
+        )
+        helpPageName = 'selectCloud'
+        return ft.View("/view100", [
+            ft.AppBar(
+                title=ft.Text("クラウドサービス選択"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            row,
+            msg,
+            line,
+            subTitle,
+            cloud
+        ])
+
+    def createView200():
+        global helpPageName, anbientInterval, anbientTimeStamp
+        def checkFields():
+            if (interval.value == '') or (timeStamp.value == ''):
+                return True
+            return False
+        def next_button_clicked(e):
+            global anbientInterval, anbientTimeStamp
+            if checkFields():
+                warning_area.value = 'Please input Anbient cloud service parameter.'
+                page.update
+            else:
+                anbientInterval = int(interval.value)
+                anbientTimeStamp = int(timeStamp.value)
+                page.go("/view210")
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text()
+        line = ft.Divider(height=2, color="black")
+        interval = ft.TextField(label="インターバル")
+        #timeStamp = ft.TextField(label="タイムスタンプ")
+        timeStamp = ft.Dropdown(
+            options=[
+                ft.dropdown.Option(key = '1' , text = "センサ端末観測時刻"),
+                ft.dropdown.Option(key = '0' , text = "データアップロード時刻"),
+            ],
+        )
+        helpPageName = 'anbientParam'
+        return ft.View("/view200", [
+            ft.AppBar(
+                title=ft.Text("Anbientパラメータ"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            row,
+            warning_area,
+            line,
+            interval,
+            timeStamp
+        ])
+
+    def createView210():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]) or ("" == mappingDefinition[i][4]) or ("" == mappingDefinition[i][5]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view220")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view211")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view212")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        page.window_width = 1950
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("センサデータ対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            channel = mappingDefinition[i][0]
+            key = mappingDefinition[i][1]
+            label = mappingDefinition[i][2]
+            topic = mappingDefinition[i][3]
+            sensorID = mappingDefinition[i][4]
+            sensorType = mappingDefinition[i][5]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    channel,
+                    key,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        targetNum = ft.Text(str(len(mappingDefinition)+1))
+        channel = ft.TextField(label="チャンネル番号")
+        key = ft.TextField(label="ライトキー")
+        label = ft.TextField(label="データラベル")
+        topic = ft.TextField(label="MQTT topic")
+        sensorID = ft.TextField(label="sensor ID")
+        sensorType = ft.Dropdown(
+            label="センサタイプ",
+            autofocus=True,
+        )
+        for i in range(len(sensorTypeName)):
+            sensorType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        mappingDefinition.append([channel, key, label, topic, sensorID, sensorType])
+        row3 = ft.Row(
+            [
+                targetNum,
+                channel,
+                key,
+                label,
+                topic,
+                sensorID,
+                sensorType
+            ]
+        )
+        lv.controls.append(row3)
+        helpPageName = 'anbientMapping'
+        return ft.View("/view210", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView211():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]) or ("" == mappingDefinition[i][4]) or ("" == mappingDefinition[i][5]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view220")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view210")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view212")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        #page.window_width = 1650
+        #page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("センサデータ対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            channel = mappingDefinition[i][0]
+            key = mappingDefinition[i][1]
+            label = mappingDefinition[i][2]
+            topic = mappingDefinition[i][3]
+            sensorID = mappingDefinition[i][4]
+            sensorType = mappingDefinition[i][5]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    channel,
+                    key,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        targetNum = ft.Text(str(len(mappingDefinition)+1))
+        channel = ft.TextField(label="チャンネル番号")
+        key = ft.TextField(label="ライトキー")
+        label = ft.TextField(label="データラベル")
+        topic = ft.TextField(label="MQTT topic")
+        sensorID = ft.TextField(label="sensor ID")
+        sensorType = ft.Dropdown(
+            label="センサタイプ",
+            autofocus=True,
+        )
+        for i in range(len(sensorTypeName)):
+            sensorType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        mappingDefinition.append([channel, key, label, topic, sensorID, sensorType])
+        row3 = ft.Row(
+            [
+                targetNum,
+                channel,
+                key,
+                label,
+                topic,
+                sensorID,
+                sensorType
+            ]
+        )
+        lv.controls.append(row3)
+        helpPageName = 'anbientMapping'
+        return ft.View("/view211", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView212():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]) or ("" == mappingDefinition[i][4]) or ("" == mappingDefinition[i][5]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view220")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view210")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view213")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        #page.window_width = 1650
+        #page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("センサデータ対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            channel = mappingDefinition[i][0]
+            key = mappingDefinition[i][1]
+            label = mappingDefinition[i][2]
+            topic = mappingDefinition[i][3]
+            sensorID = mappingDefinition[i][4]
+            sensorType = mappingDefinition[i][5]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    channel,
+                    key,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        helpPageName = 'anbientMapping'
+        return ft.View("/view212", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView213():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]) or ("" == mappingDefinition[i][4]) or ("" == mappingDefinition[i][5]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view220")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view210")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view212")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        #page.window_width = 1650
+        #page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("センサデータ対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            channel = mappingDefinition[i][0]
+            key = mappingDefinition[i][1]
+            label = mappingDefinition[i][2]
+            topic = mappingDefinition[i][3]
+            sensorID = mappingDefinition[i][4]
+            sensorType = mappingDefinition[i][5]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    channel,
+                    key,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        helpPageName = 'anbientMapping'
+        return ft.View("/view213", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView220():
+        global mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str, mqtt_user, mqtt_pass, mappingDefinition
+        def next_button_clicked(e):
+            page.go("/view230")
+        def back_button_clicked(e):
+            page.go("/view10")
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("各種定義の確認"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        backButton = ft.ElevatedButton("Back", on_click=back_button_clicked)
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+            [
+                nextButton,
+                backButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        # MQTTブローカ関連
+        subTitle1 = ft.Text("MQTTブローカとの接続関連", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        broker  = ft.Text("アドレス   : " + mqtt_broker)
+        portNum = ft.Text("ポート番号 : " + mqtt_port)
+        topic   = ft.Text("トピック   : " + mqtt_topic)
+        lv.controls.append(subTitle1)
+        lv.controls.append(broker)
+        lv.controls.append(portNum)
+        lv.controls.append(topic)
+        if mqtt_auth:
+            auth     = ft.Text("MQTT認証   : 行う")
+            userName = ft.Text("認証ユーザ : " + mqtt_user)
+            userPass = ft.Text("認証パス   : " + mqtt_pass)
+            lv.controls.append(auth)
+            lv.controls.append(userName)
+            lv.controls.append(userPass)
+        else:
+            auth    = ft.Text("MQTT認証   : 行わない")
+            lv.controls.append(auth)
+        lv.controls.append(line)
+        # Anbient, MQTT対応定義
+        subTitle2 = ft.Text("Anbientとセンサの対応", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        lv.controls.append(subTitle2)
+        for i in range(len(mappingDefinition)):
+            channel    = mappingDefinition[i][0].value
+            key        = mappingDefinition[i][1].value
+            label      = mappingDefinition[i][2].value
+            topic      = mappingDefinition[i][3].value
+            sensorID   = mappingDefinition[i][4].value
+            sensorType = mappingDefinition[i][5].value
+            anbient_info = ft.Text("Anbientチャンネル : " + channel + " , write Key : " + key + " , データ系列 : " + label)
+            sensor_info  = ft.Text("MQTTトピック : " + topic + " , センサID : " + sensorID + " , センサタイプ : " + sensorType)
+            lv.controls.append(anbient_info)
+            lv.controls.append(sensor_info)
+            lv.controls.append(line)
+        helpPageName = 'mappingCheck'
+        return ft.View("/view220", [
+            appBar,
+            row,
+            warning_area,
+            line,
+            lv
+        ])
+
+    def createView230():
+        def output_button_clicked(e):
+            if (output_file_name=="") or (output_file_name=="Canceled."):
+                warning_area.value = "Please select output file."
+                warning_area.update()
+                return
+            warning_area.value = saveConfig(output_file_name)
+            warning_area.update()
+        def pick_output_file_result(e: ft.FilePickerResultEvent):
+            global output_file_name
+            selected_output_file.value = e.path
+            output_file_name = selected_output_file.value
+            selected_output_file.update()
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("定義ファイルの出力"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        finish_button = ft.ElevatedButton(text="Finish", on_click=lambda e: page.window_destroy())
+        line = ft.Divider(height=2, color="black")
+        outputButton = ft.ElevatedButton("File output", on_click=output_button_clicked)
+        warning_area = ft.Text("")
+        subTitle = ft.Text('出力ファイル選択', size=24)
+        description = ft.Text('出力ファイルを指定してください．')
+        pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
+        page.overlay.append(pick_output_file_dialog)
+        output_file_button = ft.ElevatedButton(
+                "output file",
+                icon=ft.icons.DOWNLOAD,
+                on_click=lambda _: pick_output_file_dialog.save_file(
+                ),
+            )
+        selected_output_file = ft.Text()
+        selected_output_file.value = output_file_name
+        helpPageName = 'fileOutput'
+        return ft.View("/view230", [
+            appBar,
+            finish_button,
+            line,
+            subTitle,
+            description,
+            output_file_button,
+            selected_output_file,
+            line,
+            outputButton,
+            warning_area
+        ])
+
+    def createView300():
+        global helpPageName, arduino_id, arduino_key
+        def checkFields():
+            if (id.value == '') or (key.value == ''):
+                return True
+            return False
+        def next_button_clicked(e):
+            global arduino_id, arduino_key
+            if checkFields():
+                warning_area.value = 'Please input Arduino cloud parameter.'
+                page.update()
+            else:
+                arduino_id = id.value
+                arduino_key = key.value
+                page.go("/view310")
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text()
+        line = ft.Divider(height=2, color="black")
+        id = ft.TextField(label="Device ID")
+        key = ft.TextField(label="Key")
+        helpPageName = 'arduinoParam'
+        return ft.View("/view300", [
+            ft.AppBar(
+                title=ft.Text("Arduino Cloudパラメータ"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            row,
+            warning_area,
+            line,
+            id,
+            key
+        ])
+
+    def createView310():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view320")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view311")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view312")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        page.window_width = 1350
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("Arduino Cloud対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            label = mappingDefinition[i][0]
+            topic = mappingDefinition[i][1]
+            sensorID = mappingDefinition[i][2]
+            sensorType = mappingDefinition[i][3]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        targetNum = ft.Text(str(len(mappingDefinition)+1))
+        label = ft.TextField(label="sensor data label")
+        topic = ft.TextField(label="MQTT topic")
+        sensorID = ft.TextField(label="sensor ID")
+        sensorType = ft.Dropdown(
+            label="センサタイプ",
+            autofocus=True,
+        )
+        for i in range(len(sensorTypeName)):
+            sensorType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        mappingDefinition.append([label, topic, sensorID, sensorType])
+        row3 = ft.Row(
+            [
+                targetNum,
+                label,
+                topic,
+                sensorID,
+                sensorType
+            ]
+        )
+        lv.controls.append(row3)
+        helpPageName = 'arduinoMapping'
+        return ft.View("/view310", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView311():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view320")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view310")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view312")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        #page.window_width = 850
+        #page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("Arduino Cloud対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            label = mappingDefinition[i][0]
+            topic = mappingDefinition[i][1]
+            sensorID = mappingDefinition[i][2]
+            sensorType = mappingDefinition[i][3]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        targetNum = ft.Text(str(len(mappingDefinition)+1))
+        label = ft.TextField(label="sensor data label")
+        topic = ft.TextField(label="MQTT topic")
+        sensorID = ft.TextField(label="sensor ID")
+        sensorType = ft.Dropdown(
+            label="センサタイプ",
+            autofocus=True,
+        )
+        for i in range(len(sensorTypeName)):
+            sensorType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        mappingDefinition.append([label, topic, sensorID, sensorType])
+        row3 = ft.Row(
+            [
+                targetNum,
+                label,
+                topic,
+                sensorID,
+                sensorType
+            ]
+        )
+        lv.controls.append(row3)
+        helpPageName = 'arduinoMapping'
+        return ft.View("/view311", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView312():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view320")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view311")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view313")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        #page.window_width = 850
+        #page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("Arduino Cloud対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            label = mappingDefinition[i][0]
+            topic = mappingDefinition[i][1]
+            sensorID = mappingDefinition[i][2]
+            sensorType = mappingDefinition[i][3]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        helpPageName = 'arduinoMapping'
+        return ft.View("/view312", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView313():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view320")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view311")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view312")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        #page.window_width = 850
+        #page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("Arduino Cloud対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            label = mappingDefinition[i][0]
+            topic = mappingDefinition[i][1]
+            sensorID = mappingDefinition[i][2]
+            sensorType = mappingDefinition[i][3]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        helpPageName = 'arduinoMapping'
+        return ft.View("/view313", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView320():
+        global mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str, mqtt_user, mqtt_pass, arduino_id, arduino_key, mappingDefinition
+        def next_button_clicked(e):
+            page.go("/view330")
+        def back_button_clicked(e):
+            page.go("/view10")
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("各種定義の確認"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        backButton = ft.ElevatedButton("Back", on_click=back_button_clicked)
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+            [
+                nextButton,
+                backButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        # MQTTブローカ関連
+        subTitle1 = ft.Text("MQTTブローカとの接続関連", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        broker  = ft.Text("アドレス   : " + mqtt_broker)
+        portNum = ft.Text("ポート番号 : " + mqtt_port)
+        topic   = ft.Text("トピック   : " + mqtt_topic)
+        lv.controls.append(subTitle1)
+        lv.controls.append(broker)
+        lv.controls.append(portNum)
+        lv.controls.append(topic)
+        if mqtt_auth:
+            auth     = ft.Text("MQTT認証   : 行う")
+            userName = ft.Text("認証ユーザ : " + mqtt_user)
+            userPass = ft.Text("認証パス   : " + mqtt_pass)
+            lv.controls.append(auth)
+            lv.controls.append(userName)
+            lv.controls.append(userPass)
+        else:
+            auth    = ft.Text("MQTT認証   : 行わない")
+            lv.controls.append(auth)
+        lv.controls.append(line)
+        # Arduino Cloud関連定義
+        subTitle2 = ft.Text("Arduino Cloud情報", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        arduino_id_filed = ft.Text("Arduino device ID: " + arduino_id)
+        arduino_key_field = ft.Text("Arduino key : " + arduino_key)
+        lv.controls.append(subTitle2)
+        lv.controls.append(arduino_id_filed)
+        lv.controls.append(arduino_key_field)
+        lv.controls.append(line)
+        # センサデータ関係定義
+        subTitle3 = ft.Text("センサ情報", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        lv.controls.append(subTitle3)
+        for i in range(len(mappingDefinition)):
+            label = mappingDefinition[i][0].value
+            topic = mappingDefinition[i][1].value
+            sensorID = mappingDefinition[i][2].value
+            sensorType = mappingDefinition[i][3].value
+            sensor_info  = ft.Text("データラベル : " + str(label) + " , MQTTトピック : " + topic + " , センサID : " + sensorID + " , センサタイプ : " + sensorType)
+            lv.controls.append(sensor_info)
+            lv.controls.append(line)
+        helpPageName = 'mappingCheck'
+        return ft.View("/view320", [
+            appBar,
+            row,
+            warning_area,
+            line,
+            subTitle1,
+            lv
+        ])
+
+    def createView330():
+        def output_button_clicked(e):
+            if (output_file_name=="") or (output_file_name=="Canceled."):
+                warning_area.value = "Please select output file."
+                warning_area.update()
+                return
+            warning_area.value = saveArduinoConfig(output_file_name)
+            warning_area.update()
+        def pick_output_file_result(e: ft.FilePickerResultEvent):
+            global output_file_name
+            selected_output_file.value = e.path
+            output_file_name = selected_output_file.value
+            selected_output_file.update()
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("定義ファイルの出力"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        finish_button = ft.ElevatedButton(text="Finish", on_click=lambda e: page.window_destroy())
+        line = ft.Divider(height=2, color="black")
+        outputButton = ft.ElevatedButton("File output", on_click=output_button_clicked)
+        warning_area = ft.Text("")
+        subTitle = ft.Text('出力ファイル選択', size=24)
+        description = ft.Text('出力ファイルを指定してください．')
+        pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
+        page.overlay.append(pick_output_file_dialog)
+        output_file_button = ft.ElevatedButton(
+                "output file",
+                icon=ft.icons.DOWNLOAD,
+                on_click=lambda _: pick_output_file_dialog.save_file(
+                ),
+            )
+        selected_output_file = ft.Text()
+        selected_output_file.value = output_file_name
+        helpPageName = 'fileOutput'
+        return ft.View("/view330", [
+            appBar,
+            finish_button,
+            line,
+            subTitle,
+            description,
+            output_file_button,
+            selected_output_file,
+            line,
+            outputButton,
+            warning_area
+        ])
+
+    def createView400():
+        global helpPageName, googleTimeStamp
+        def checkFields():
+            if timeStamp.value == '':
+                return True
+            return False
+        def next_button_clicked(e):
+            global googleTimeStamp
+            if checkFields():
+                warning_area.value = 'Please input Google service parameter.'
+                page.update
+            else:
+                googleTimeStamp = int(timeStamp.value)
+                page.go("/view410")
+        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        finishButton = ft.ElevatedButton(text="Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text()
+        line = ft.Divider(height=2, color="black")
+        subTitle = ft.Text("データ時刻としてどの時刻を用いるか選択してください．")
+        #timeStamp = ft.TextField(label="タイムスタンプの種類選択")
+        timeStamp = ft.Dropdown(
+            options=[
+                ft.dropdown.Option(key = '1' , text = "センサ端末観測時刻"),
+                ft.dropdown.Option(key = '0' , text = "データアップロード時刻"),
+            ],
+        )
+        helpPageName = 'googleParam'
+        return ft.View("/view400", [
+            ft.AppBar(
+                title=ft.Text("Googleパラメータ"),
+                bgcolor=ft.colors.BLUE,
+                actions=[
+                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ]
+            ),
+            row,
+            warning_area,
+            line,
+            subTitle,
+            timeStamp
+        ])
+
+    def createView410():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]) or ("" == mappingDefinition[i][4]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view420")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view411")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view412")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        page.window_width = 1650
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("センサデータ対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            key = mappingDefinition[i][0]
+            label = mappingDefinition[i][1]
+            topic = mappingDefinition[i][2]
+            sensorID = mappingDefinition[i][3]
+            sensorType = mappingDefinition[i][4]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    key,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        targetNum = ft.Text(str(len(mappingDefinition)+1))
+        key = ft.TextField(label="GoogleデプロイID")
+        label = ft.TextField(label="データラベル")
+        topic = ft.TextField(label="MQTT topic")
+        sensorID = ft.TextField(label="sensor ID")
+        sensorType = ft.Dropdown(
+            label="センサタイプ",
+            autofocus=True,
+        )
+        for i in range(len(sensorTypeName)):
+            sensorType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        mappingDefinition.append([key, label, topic, sensorID, sensorType])
+        row3 = ft.Row(
+            [
+                targetNum,
+                key,
+                label,
+                topic,
+                sensorID,
+                sensorType
+            ]
+        )
+        lv.controls.append(row3)
+        helpPageName = 'googleMapping'
+        return ft.View("/view410", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView411():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]) or ("" == mappingDefinition[i][4]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view420")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view410")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view412")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        #page.window_width = 850
+        #page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("センサデータ対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            key = mappingDefinition[i][0]
+            label = mappingDefinition[i][1]
+            topic = mappingDefinition[i][2]
+            sensorID = mappingDefinition[i][3]
+            sensorType = mappingDefinition[i][4]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    key,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        targetNum = ft.Text(str(len(mappingDefinition)+1))
+        key = ft.TextField(label="GoogleデプロイID")
+        label = ft.TextField(label="データラベル")
+        topic = ft.TextField(label="MQTT topic")
+        sensorID = ft.TextField(label="sensor ID")
+        sensorType = ft.Dropdown(
+            label="センサタイプ",
+            autofocus=True,
+        )
+        for i in range(len(sensorTypeName)):
+            sensorType.options.append(ft.dropdown.Option(key = sensorTypeName[i], text = sensorTypeText[sensorTypeName[i]]))
+        mappingDefinition.append([key, label, topic, sensorID, sensorType])
+        row3 = ft.Row(
+            [
+                targetNum,
+                key,
+                label,
+                topic,
+                sensorID,
+                sensorType
+            ]
+        )
+        lv.controls.append(row3)
+        helpPageName = 'googleMapping'
+        return ft.View("/view411", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView412():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]) or ("" == mappingDefinition[i][4]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view420")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view410")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view413")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        #page.window_width = 850
+        #page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("センサデータ対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            key = mappingDefinition[i][0]
+            label = mappingDefinition[i][1]
+            topic = mappingDefinition[i][2]
+            sensorID = mappingDefinition[i][3]
+            sensorType = mappingDefinition[i][4]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    key,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        helpPageName = 'googleMapping'
+        return ft.View("/view412", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView413():
+        global helpPageName, mappingDefinition
+        def check_mapping():
+            for i in range(len(mappingDefinition)):
+                if ("" == mappingDefinition[i][0]) or ("" == mappingDefinition[i][1]) or ("" == mappingDefinition[i][2]) or ("" == mappingDefinition[i][3]) or ("" == mappingDefinition[i][4]):
+                    return True
+            return False
+        def next_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view420")
+        def add_button_clicked(e):
+            if check_mapping():
+                warning_area.value = "対応関係定義に空欄があります．"
+                page.update()
+            else:
+                page.go("/view410")
+        def delete_button_clicked(e):
+            num = int(deleteTarget.value)-1
+            if (num < 0) or (num > len(mappingDefinition)):
+                warning_area.value = "削除対象の番号を正しく入力してください．"
+                page.update()
+            else:
+                mappingDefinition.pop(num)
+                page.go("/view412")
+        def deleteTargetChange(e):
+            if (deleteTarget.value != "") and (1 < len(mappingDefinition)):
+                deleteMappingButton.disabled=False
+                page.update()
+            else:
+                deleteMappingButton.disabled=True
+                page.update()
+        #def enebleAddButton(e):
+        #    if (channdelID.value == '') or (writeKey.value == ''):
+        #        addMappingButton.disabled=True
+        #        nextButton.disabled=True
+        #    else:
+        #        addMappingButton.disabled=False
+        #        nextButton.disabled=False
+        #    page.update()
+        #page.window_width = 850
+        #page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("センサデータ対応関係定義"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked, disabled=False)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row1 = ft.Row(
+            [
+                nextButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        addMappingButton = ft.ElevatedButton("add mapping", on_click=add_button_clicked, disabled=False)
+        deleteMappingButton = ft.ElevatedButton("delete mapping", on_click=delete_button_clicked, disabled=True)
+        deleteTarget = ft.TextField(label="delete target", on_change=deleteTargetChange)
+        row2 = ft.Row(
+            [
+                deleteTarget,
+                deleteMappingButton
+            ]
+        )
+        subTitle1 = ft.Text("対応関係定義", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        for i in range(len(mappingDefinition)):
+            targetNum = ft.Text(str(i+1))
+            key = mappingDefinition[i][0]
+            label = mappingDefinition[i][1]
+            topic = mappingDefinition[i][2]
+            sensorID = mappingDefinition[i][3]
+            sensorType = mappingDefinition[i][4]
+            row3 = ft.Row(
+                [
+                    targetNum,
+                    key,
+                    label,
+                    topic,
+                    sensorID,
+                    sensorType
+                ]
+            )
+            lv.controls.append(row3)
+        helpPageName = 'googleMapping'
+        return ft.View("/view413", [
+            appBar,
+            row1,
+            warning_area,
+            line,
+            subTitle1,
+            addMappingButton,
+            row2,
+            lv
+        ])
+
+    def createView420():
+        global mqtt_broker, mqtt_port, mqtt_topic, mqtt_auth, mqtt_auth_str, mqtt_user, mqtt_pass, googleTimeStamp, mappingDefinition
+        def next_button_clicked(e):
+            page.go("/view430")
+        def back_button_clicked(e):
+            page.go("/view10")
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("各種定義の確認"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        backButton = ft.ElevatedButton("Back", on_click=back_button_clicked)
+        nextButton = ft.ElevatedButton("Next", on_click=next_button_clicked)
+        finishButton = ft.ElevatedButton("Finish", on_click=lambda e: page.window_destroy())
+        row = ft.Row(
+            [
+                nextButton,
+                backButton,
+                finishButton
+            ]
+        )
+        warning_area = ft.Text("")
+        line = ft.Divider(height=2, color="black")
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        # MQTTブローカ関連
+        subTitle1 = ft.Text("MQTTブローカとの接続関連", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        broker  = ft.Text("アドレス   : " + mqtt_broker)
+        portNum = ft.Text("ポート番号 : " + mqtt_port)
+        topic   = ft.Text("トピック   : " + mqtt_topic)
+        lv.controls.append(subTitle1)
+        lv.controls.append(broker)
+        lv.controls.append(portNum)
+        lv.controls.append(topic)
+        if mqtt_auth:
+            auth     = ft.Text("MQTT認証   : 行う")
+            userName = ft.Text("認証ユーザ : " + mqtt_user)
+            userPass = ft.Text("認証パス   : " + mqtt_pass)
+            lv.controls.append(auth)
+            lv.controls.append(userName)
+            lv.controls.append(userPass)
+        else:
+            auth    = ft.Text("MQTT認証   : 行わない")
+            lv.controls.append(auth)
+        lv.controls.append(line)
+        # Arduino Cloud関連定義
+        subTitle2 = ft.Text("Arduino Cloud情報", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        timestamp_filed = ft.Text("time stamp: " + str(googleTimeStamp))
+        lv.controls.append(subTitle2)
+        lv.controls.append(timestamp_filed)
+        lv.controls.append(line)
+        # センサデータ関係定義
+        subTitle3 = ft.Text("センサ情報", style=ft.TextThemeStyle.TITLE_MEDIUM)
+        lv.controls.append(subTitle3)
+        for i in range(len(mappingDefinition)):
+            key = mappingDefinition[i][0].value
+            label = mappingDefinition[i][1].value
+            topic = mappingDefinition[i][2].value
+            sensorID = mappingDefinition[i][3].value
+            sensorType = mappingDefinition[i][4].value
+            sensor_info  = ft.Text("デプロイID : " + str(key) + " , データラベル: " + str(label) + " , MQTTトピック : " + topic + " , センサID : " + sensorID + " , センサタイプ : " + sensorType)
+            lv.controls.append(sensor_info)
+            lv.controls.append(line)
+        helpPageName = 'googleMappingCheck'
+        return ft.View("/view420", [
+            appBar,
+            row,
+            warning_area,
+            line,
+            subTitle1,
+            lv
+        ])
+
+    def createView430():
+        def output_button_clicked(e):
+            if (output_file_name=="") or (output_file_name=="Canceled."):
+                warning_area.value = "Please select output file."
+                warning_area.update()
+                return
+            warning_area.value = saveGoogleConfig(output_file_name)
+            warning_area.update()
+        def pick_output_file_result(e: ft.FilePickerResultEvent):
+            global output_file_name
+            selected_output_file.value = e.path
+            output_file_name = selected_output_file.value
+            selected_output_file.update()
+        page.window_width = 850
+        page.window_height = 500
+        appBar = ft.AppBar(
+            title=ft.Text("定義ファイルの出力"),
+            bgcolor=ft.colors.BLUE,
+            actions=[
+                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        finish_button = ft.ElevatedButton(text="Finish", on_click=lambda e: page.window_destroy())
+        line = ft.Divider(height=2, color="black")
+        outputButton = ft.ElevatedButton("File output", on_click=output_button_clicked)
+        warning_area = ft.Text("")
+        subTitle = ft.Text('出力ファイル選択', size=24)
+        description = ft.Text('出力ファイルを指定してください．')
+        pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
+        page.overlay.append(pick_output_file_dialog)
+        output_file_button = ft.ElevatedButton(
+                "output file",
+                icon=ft.icons.DOWNLOAD,
+                on_click=lambda _: pick_output_file_dialog.save_file(
+                ),
+            )
+        selected_output_file = ft.Text()
+        selected_output_file.value = output_file_name
+        helpPageName = 'googleFileOutput'
+        return ft.View("/view430", [
+            appBar,
+            finish_button,
+            line,
+            subTitle,
+            description,
+            output_file_button,
+            selected_output_file,
+            line,
+            outputButton,
+            warning_area
+        ])
+
+    def route_change(handler):
+        troute = ft.TemplateRoute(handler.route)
+        page.views.clear()
+        if troute.match("/view10"):
+            page.views.append(createView10())
+        elif troute.match("/view20"):
+            if mqtt_auth_str == 'done' and str(mqtt_auth) == "False":
+                page.go("/view100")
+            else:
+                page.views.append(createView20())
+        elif troute.match("/view100"):
+            page.views.append(createView100())
+        elif troute.match("/view200"):
+            page.views.append(createView200())
+        elif troute.match("/view210"):
+            page.views.append(createView210())
+        elif troute.match("/view211"):
+            page.views.append(createView211())
+        elif troute.match("/view212"):
+            page.views.append(createView212())
+        elif troute.match("/view213"):
+            page.views.append(createView213())
+        elif troute.match("/view220"):
+            page.views.append(createView220())
+        elif troute.match("/view230"):
+            page.views.append(createView230())
+        elif troute.match("/view300"):
+            page.views.append(createView300())
+        elif troute.match("/view310"):
+            page.views.append(createView310())
+        elif troute.match("/view311"):
+            page.views.append(createView311())
+        elif troute.match("/view312"):
+            page.views.append(createView312())
+        elif troute.match("/view313"):
+            page.views.append(createView313())
+        elif troute.match("/view320"):
+            page.views.append(createView320())
+        elif troute.match("/view330"):
+            page.views.append(createView330())
+        elif troute.match("/view400"):
+            page.views.append(createView400())
+        elif troute.match("/view410"):
+            page.views.append(createView410())
+        elif troute.match("/view411"):
+            page.views.append(createView411())
+        elif troute.match("/view412"):
+            page.views.append(createView412())
+        elif troute.match("/view413"):
+            page.views.append(createView413())
+        elif troute.match("/view420"):
+            page.views.append(createView420())
+        elif troute.match("/view430"):
+            page.views.append(createView430())
+    page.on_route_change = route_change
+    page.title = "defineMqttToCloud"
+    page.go("/view10")
+
+
+if __name__ == '__main__':
+    # sample parameter
+    # mqtt_broker = '10.116.63.186'
+    # mqtt_port = 1883
+    # mqtt_topic = 'arduino/echo'
+    error = loadHelp(help_file)
+    if error != "":
+        ft.app(target=errorWindow)
+    else:
+        ft.app(target=mainWindow)
+
