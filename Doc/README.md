@@ -20,6 +20,9 @@
 - [mqttToArduino](mqttToArduino.md)
 - [mqttToGoogleSP](mqttToGoogleSP.md)
 
+上記3つのプログラム用の入力/設定ファイルを対話的に作成するアプリも用意されている．
+
+- [defineMqttToCloud](defineMqttToCloud.md)
 
 ## ローカル処理用プログラム
 
