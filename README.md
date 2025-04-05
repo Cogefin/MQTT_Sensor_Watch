@@ -1,6 +1,6 @@
 # mqtt_sensor_watch
 
-このプログラム群は，[Gen_arduino_mqtt](https://github.com/masaaki-noro/Gen_arduino_mqtt)で生成されたArduino用プログラムで
+このプログラム群は，[MQTT_Sensor_Generator](https://github.com/Cogefin/MQTT_Sensor_Generator)で生成されたArduino用プログラムで
 動作する，Arduinoを使ったセンサ端末が発信するセンサデータを可視化するためのものである．
 
 プログラム群は大きく分けて，MQTTブローカから取得したセンサデータをローカルに保存し，自前のwebサーバで可視化するものと，
