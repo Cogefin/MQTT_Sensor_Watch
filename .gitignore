@@ -166,7 +166,12 @@ backup
 # vim
 *~
 *.swp
+
+# テスト等の作業用ディレクトリはリポジトリに取り込まない
 /テストデータ
 /arduino
+/test
+/work
 
+# pythonから変換したexeを取り込まないための定義
 *.exe
