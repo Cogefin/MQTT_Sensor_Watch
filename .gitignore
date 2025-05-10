@@ -172,6 +172,7 @@ backup
 /arduino
 /test
 /work
+/tmp
 
 # pythonから変換したexeを取り込まないための定義
 *.exe
