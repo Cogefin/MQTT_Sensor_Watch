@@ -76,7 +76,7 @@ def load_init_file(help_file_name, parts_file_name):
     except Exception as e:
         error = 'Exception occurred while loading config file of this application...'
         return [error , help, '']
-    
+
     for i in tmp:
         parts.append(i.replace('\n',''))
     return ['', help, parts]
@@ -370,13 +370,13 @@ def outputHTML(config, parts, outputFile):
 def errorWindow(page: ft.Page):
     global error
     page.title = "Error"
-    page.window_width = 400
-    page.window_height = 500
+    page.window.width = 400
+    page.window.height = 500
     page.autoscroll = True
-    appBar = ft.AppBar(title=ft.Text("Error"),bgcolor=ft.colors.RED)
+    appBar = ft.AppBar(title=ft.Text("Error"),bgcolor=ft.Colors.RED)
     error_field = ft.Text(error)
     line = ft.Divider(height=2, color="black")
-    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
     page.add(
         appBar,
         error_field,
@@ -394,15 +394,15 @@ def icon_clicked(e):
     #            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
     #        )
     #    ],
-    #    page_props={"window_width":800},
+    #    page_props={"window.width":800},
     #)
     #p.start()
 
 def helpWindow(page: ft.Page):
     global help
     page.title = "Help"
-    page.window_width = 800
-    page.window_height = 500
+    page.window.width = 800
+    page.window.height = 500
     page.autoscroll = True
     help_contents = ft.Markdown(help['top'], selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB)
     page.add(help_contents)
@@ -437,20 +437,20 @@ def fileWindow(page: ft.Page):
         if '' != error:
             ft.app(target=errorWindow)
         outputHTML(config, parts, outputFile)
-        page.window_destroy()
+        page.window.destroy()
 
     appBar = ft.AppBar(
             title=ft.Text("Generate viewer HTML page"),
-            bgcolor=ft.colors.BLUE,
+            bgcolor=ft.Colors.BLUE,
             actions=[
-                ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
             ]
         )
     subTitle1 = ft.Text("Configuration file selection.", style=ft.TextThemeStyle.TITLE_MEDIUM)
     pick_input_file_dialog = ft.FilePicker(on_result=pick_input_file_result)
     config_file_button = ft.ElevatedButton(
             "configuration file",
-            icon=ft.icons.UPLOAD_FILE,
+            icon=ft.Icons.UPLOAD_FILE,
             on_click=lambda _: pick_input_file_dialog.pick_files(
                 allow_multiple=False,
             ),
@@ -461,16 +461,16 @@ def fileWindow(page: ft.Page):
     pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
     output_file_button = ft.ElevatedButton(
             "output file",
-            icon=ft.icons.DOWNLOAD,
+            icon=ft.Icons.DOWNLOAD,
             on_click=lambda _: pick_output_file_dialog.save_file(
             ),
         )
     selected_output_file = ft.Text()
 
     page.title = "Generate sensor data viewer"
-    page.window_width = 400
-    page.window_height = 500
-    
+    page.window.width = 400
+    page.window.height = 500
+
     page.overlay.append(pick_input_file_dialog)
     page.overlay.append(pick_output_file_dialog)
 
@@ -482,20 +482,22 @@ def fileWindow(page: ft.Page):
                 warning_message,
             ]
         )
-    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
+    lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+    lv.controls.append(subTitle1)
+    lv.controls.append(config_file_button)
+    lv.controls.append(selected_input_file)
+    lv.controls.append(line)
+    lv.controls.append(subTitle2)
+    lv.controls.append(output_file_button)
+    lv.controls.append(selected_output_file)
+    lv.controls.append(line)
+    lv.controls.append(row)
+    lv.controls.append(finish_button)
 
     page.add(
         appBar,
-        subTitle1,
-        config_file_button,
-        selected_input_file,
-        line,
-        subTitle2,
-        output_file_button,
-        selected_output_file,
-        line,
-        row,
-        finish_button
+        lv
     )
 
 if __name__ == "__main__":
@@ -505,6 +507,5 @@ if __name__ == "__main__":
         ft.app(target=fileWindow)
     else:
         ft.app(target=errorWindow)
-
 
 

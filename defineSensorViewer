@@ -22,12 +22,12 @@ def loadHelp(helpFile):
 def errorWindow(page: ft.Page):
     global error
     page.title = "Error"
-    page.window_width = 400
-    page.window_height = 500
+    page.window.width = 400
+    page.window.height = 500
     page.autoscroll = True
-    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
     page.add(
-        ft.AppBar(title=ft.Text("Error"),bgcolor=ft.colors.RED),
+        ft.AppBar(title=ft.Text("Error"),bgcolor=ft.Colors.RED),
         ft.Text(error),
         ft.Divider(height=2, color="black"),
         finish_button
@@ -44,15 +44,15 @@ def icon_clicked(e):
     #            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
     #        )
     #    ],
-    #    page_props={"window_width":800},
+    #    page_props={"window.width":800},
     #)
     #p.start()
 
 def helpWindow(page: ft.Page):
     global helpPageName, help
     page.title = "Help"
-    page.window_width = 800
-    page.window_height = 500
+    page.window.width = 800
+    page.window.height = 500
     page.autoscroll = True
     help_contents = ft.Markdown(help[helpPageName], selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB)
     page.add(help_contents)
@@ -764,14 +764,14 @@ def mainWindow(page: ft.Page):
                 page.go("/view10")
         appBar = ft.AppBar(
                 title=ft.Text("共通設定項目"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
         errorField = ft.Text('')
-        
+
         subTitle0 = ft.Text('ページタイトル', size=24)
         description0 = ft.Text('生成するwebページのタイトルを定義してください．')
         pageTitleBox = ft.TextField(label='ページタイトル',value='ページタイトル')
@@ -782,7 +782,7 @@ def mainWindow(page: ft.Page):
         timeRange = timeRangeBox
         subTitle2 = ft.Text('小数点以下の取り扱い', size=24)
         description2 = ft.Text('統計処理など，各種の計算結果を表示する際に，小数点以下何桁まで表示するかを入力してください．')
-        decimalPointBox = ft.TextField(label='遡る時間(秒単位)',value='5')
+        decimalPointBox = ft.TextField(label='小数点以下の桁数',value='5')
         decimalPoint = decimalPointBox
         subTitle3 = ft.Text('再描画時間間隔', size=24)
         description3 = ft.Text('出力するwebページは一定時間間隔で再描画(再実行)されるため，そのインターバル(秒単位)を入力してください．')
@@ -820,7 +820,7 @@ def mainWindow(page: ft.Page):
         tmp = [appBar, nextButton, errorField, line, lv]
         #tmp = [appBar, nextButton, errorField, line, subTitle0, description0, pageTitleBox, line, subTitle1, description1, timeRangeBox, line, subTitle2, description2, decimalPointBox, line, subTitle3, description3, intervalBox, subTitle4, description4, radioButton, fileNameBox]
         helpPageName = 'general'
-        page.window_height = 1050
+        page.window.height = 1050
         return ft.View("/view5", tmp)
 
     def createView10():
@@ -855,9 +855,9 @@ def mainWindow(page: ft.Page):
             page.go("/view12")
         appBar = ft.AppBar(
                 title=ft.Text("監視対象センサ選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
@@ -929,9 +929,9 @@ def mainWindow(page: ft.Page):
             page.go("/view12")
         appBar = ft.AppBar(
                 title=ft.Text("監視対象センサ選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
@@ -1002,9 +1002,9 @@ def mainWindow(page: ft.Page):
             page.go("/view13")
         appBar = ft.AppBar(
                 title=ft.Text("監視対象センサ選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
@@ -1062,9 +1062,9 @@ def mainWindow(page: ft.Page):
             page.go("/view12")
         appBar = ft.AppBar(
                 title=ft.Text("監視対象センサ選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
@@ -1124,9 +1124,9 @@ def mainWindow(page: ft.Page):
                 page.go("/view30")
         appBar = ft.AppBar(
                 title=ft.Text("データ系列に対する前処理"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -1213,9 +1213,9 @@ def mainWindow(page: ft.Page):
                 page.go("/view30")
         appBar = ft.AppBar(
                 title=ft.Text("データ系列に対する前処理"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -1302,9 +1302,9 @@ def mainWindow(page: ft.Page):
                 page.go("/view30")
         appBar = ft.AppBar(
                 title=ft.Text("データ系列に対する前処理"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -1371,9 +1371,9 @@ def mainWindow(page: ft.Page):
                 page.go("/view30")
         appBar = ft.AppBar(
                 title=ft.Text("データ系列に対する前処理"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -1415,9 +1415,9 @@ def mainWindow(page: ft.Page):
             page.go("/view31")
         appBar = ft.AppBar(
                 title=ft.Text("統計値算出の有無判断"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -1471,9 +1471,9 @@ def mainWindow(page: ft.Page):
                 page.go("/view40")
         appBar = ft.AppBar(
                 title=ft.Text("統計データ算出用，前処理済み系列の選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -1563,9 +1563,9 @@ def mainWindow(page: ft.Page):
                 page.go("/view40")
         appBar = ft.AppBar(
                 title=ft.Text("統計データ算出用，前処理済み系列の選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -1655,9 +1655,9 @@ def mainWindow(page: ft.Page):
                 page.go("/view40")
         appBar = ft.AppBar(
                 title=ft.Text("統計データ算出用，前処理済み系列の選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -1730,9 +1730,9 @@ def mainWindow(page: ft.Page):
                 page.go("/view40")
         appBar = ft.AppBar(
                 title=ft.Text("各種処理用，前処理済み系列の選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -1790,9 +1790,9 @@ def mainWindow(page: ft.Page):
                     page.go("/view41")
         appBar = ft.AppBar(
                 title=ft.Text("時系列グラフ作成数の選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -1851,17 +1851,17 @@ def mainWindow(page: ft.Page):
         if (timeSeriesGraphButtonState==-1) or (timeSeriesGraphButtonState==2):
             appBar = ft.AppBar(
                 title=ft.Text("時系列グラフ"+str(len(timeSeriesGraphTitle)+1)+"番目の定義"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         else:
             appBar = ft.AppBar(
                 title=ft.Text("時系列グラフ"+str(len(timeSeriesGraphTitle)-1)+"番目の定義"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -1962,17 +1962,17 @@ def mainWindow(page: ft.Page):
         if (timeSeriesGraphButtonState==-1) or (timeSeriesGraphButtonState==2):
             appBar = ft.AppBar(
                 title=ft.Text("時系列グラフ"+str(len(timeSeriesGraphTitle)+1)+"番目の定義"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         else:
             appBar = ft.AppBar(
                 title=ft.Text("時系列グラフ"+str(len(timeSeriesGraphTitle)-1)+"番目の定義"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -2055,9 +2055,9 @@ def mainWindow(page: ft.Page):
                     #page.go("/view60")
         appBar = ft.AppBar(
                 title=ft.Text("相関分析を行うデータの組み合わせの数の入力"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -2091,9 +2091,9 @@ def mainWindow(page: ft.Page):
         num = len(correlationAnalysisPair)
         appBar = ft.AppBar(
                 title=ft.Text("相関分析対象"+str(num+1)+"番目の定義"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         subTitle0 = ft.Text('前処理済みデータ系列', size=24)
@@ -2154,9 +2154,9 @@ def mainWindow(page: ft.Page):
         num = len(correlationAnalysisPair)
         appBar = ft.AppBar(
                 title=ft.Text("相関分析対象"+str(num+1)+"番目の定義"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         subTitle0 = ft.Text('前処理済みデータ系列', size=24)
@@ -2231,9 +2231,9 @@ def mainWindow(page: ft.Page):
                     page.go("/view61")
         appBar = ft.AppBar(
                 title=ft.Text("データの監視(エラーチェック)を行うルール数の入力"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -2274,9 +2274,9 @@ def mainWindow(page: ft.Page):
         num = len(dataRuleMessage)
         appBar = ft.AppBar(
                 title=ft.Text("データ監視ルール"+str(num+1)+"番目の入力"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         subTitle0 = ft.Text('前処理済みデータ系列', size=24)
@@ -2319,9 +2319,9 @@ def mainWindow(page: ft.Page):
         num = len(dataRuleMessage)
         appBar = ft.AppBar(
                 title=ft.Text("データ監視ルール"+str(num+1)+"番目の入力"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         subTitle0 = ft.Text('前処理済みデータ系列', size=24)
@@ -2357,9 +2357,9 @@ def mainWindow(page: ft.Page):
                 page.update()
         appBar = ft.AppBar(
                 title=ft.Text("データ監視ルール用ライブラリ情報の入力"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         subTitle0 = ft.Text('ライブラリ定義', size=24)
@@ -2407,13 +2407,13 @@ def mainWindow(page: ft.Page):
             error = outputConfig(output_file_name)
             if '' != error:
                 ft.app(target=errorWindow)
-            page.window_destroy()
-        
+            page.window.destroy()
+
         appBar = ft.AppBar(
                 title=ft.Text("設定ファイル出力"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
@@ -2421,7 +2421,7 @@ def mainWindow(page: ft.Page):
         pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
         pick_output_file_dialog_button = ft.ElevatedButton(
             "output file",
-            icon=ft.icons.DOWNLOAD,
+            icon=ft.Icons.DOWNLOAD,
             on_click=lambda _: pick_output_file_dialog.save_file(
             ),
         )
@@ -2435,7 +2435,7 @@ def mainWindow(page: ft.Page):
                 warning_message,
             ]
         )
-        finish_button = ft.ElevatedButton(text="終了", on_click=lambda e: page.window_destroy())
+        finish_button = ft.ElevatedButton(text="終了", on_click=lambda e: page.window.destroy())
         tmp = [appBar, line, subTitle, pick_output_file_dialog_button, selected_output_file, row, finish_button ]
         helpPageName='fileOutput'
         return ft.View("/view80", tmp)
@@ -2504,6 +2504,4 @@ if __name__ == '__main__':
         ft.app(target=errorWindow)
     else:
         ft.app(target=mainWindow)
-
-
 

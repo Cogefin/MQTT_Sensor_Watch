@@ -80,7 +80,7 @@ def loadHelp(helpFile):
         return "Exception occurred while loading custom platform definition YAML file..."
     return ""
 
-def icon_clicked(e):
+def help_icon_clicked(e):
     ft.app(target=helpWindow)
     #global helpPageName, help
     #p = subPage(
@@ -91,15 +91,15 @@ def icon_clicked(e):
     #            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
     #        )
     #    ],
-    #    page_props={"window_width":800},
+    #    page_props={"window.width":800},
     #)
     #p.start()
 
 def helpWindow(page: ft.Page):
     global helpPageName, help
     page.title = "Help"
-    page.window_width = 800
-    page.window_height = 500
+    page.window.width = 800
+    page.window.height = 500
     page.autoscroll = True
     help_contents = ft.Markdown(help[helpPageName], selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB)
     page.add(help_contents)
@@ -107,12 +107,12 @@ def helpWindow(page: ft.Page):
 def errorWindow(page: ft.Page):
     global error
     page.title = "Error"
-    page.window_width = 400
-    page.window_height = 500
+    page.window.width = 400
+    page.window.height = 500
     page.autoscroll = True
-    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
     page.add(
-        ft.AppBar(title=ft.Text("Error"),bgcolor=ft.colors.RED),
+        ft.AppBar(title=ft.Text("Error"),bgcolor=ft.Colors.RED),
         ft.Text(error),
         ft.Divider(height=2, color="black"),
         finish_button
@@ -391,13 +391,13 @@ def mainWindow(page: ft.Page):
 
         appBar = ft.AppBar(
                 title=ft.Text("ファイル選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=help_icon_clicked),
                 ]
             )
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
         errorField = ft.Text('')
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('データファイル', size=24)
@@ -405,7 +405,7 @@ def mainWindow(page: ft.Page):
         pick_input_file_dialog = ft.FilePicker(on_result=pick_input_file_result)
         input_file_button = ft.ElevatedButton(
                 "sensor data file",
-                icon=ft.icons.UPLOAD_FILE,
+                icon=ft.Icons.UPLOAD_FILE,
                 on_click=lambda _: pick_input_file_dialog.pick_files(
                     allow_multiple=False,
                 ),
@@ -417,15 +417,15 @@ def mainWindow(page: ft.Page):
         pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
         output_file_button = ft.ElevatedButton(
                 "output file",
-                icon=ft.icons.DOWNLOAD,
+                icon=ft.Icons.DOWNLOAD,
                 on_click=lambda _: pick_output_file_dialog.save_file(
                 ),
             )
         selected_output_file = ft.Text()
         selected_output_file.value = output_file_name
         page.title = "Sensor data filter"
-        page.window_width = 400
-        page.window_height = 500
+        page.window.width = 400
+        page.window.height = 500
         page.overlay.append(pick_input_file_dialog)
         page.overlay.append(pick_output_file_dialog)
         row = ft.Row(
@@ -453,7 +453,7 @@ def mainWindow(page: ft.Page):
         ]
         helpPageName = 'fileSelection'
         return ft.View("/view10", win)
-        
+
     def createView20():
         global helpPageName, startTime, interval, limit
         def checkFields():
@@ -483,13 +483,13 @@ def mainWindow(page: ft.Page):
             page.update()
         appBar = ft.AppBar(
                 title=ft.Text("時間/周期設定"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=help_icon_clicked),
                 ]
             )
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
         errorField = ft.Text('')
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('データ取得開始時間', size=24)
@@ -565,13 +565,13 @@ def mainWindow(page: ft.Page):
             page.go("/view32")
         appBar = ft.AppBar(
                 title=ft.Text("センサ選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=help_icon_clicked),
                 ]
             )
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
         row1 = ft.Row(
             [
                 nextButton,
@@ -648,13 +648,13 @@ def mainWindow(page: ft.Page):
             page.go("/view32")
         appBar = ft.AppBar(
                 title=ft.Text("センサ選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=help_icon_clicked),
                 ]
             )
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
         row1 = ft.Row(
             [
                 nextButton,
@@ -731,13 +731,13 @@ def mainWindow(page: ft.Page):
             page.go("/view33")
         appBar = ft.AppBar(
                 title=ft.Text("センサ選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=help_icon_clicked),
                 ]
             )
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
         row1 = ft.Row(
             [
                 nextButton,
@@ -812,13 +812,13 @@ def mainWindow(page: ft.Page):
             page.go("/view32")
         appBar = ft.AppBar(
                 title=ft.Text("センサ選択"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=help_icon_clicked),
                 ]
             )
         nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
         row1 = ft.Row(
             [
                 nextButton,
@@ -871,20 +871,20 @@ def mainWindow(page: ft.Page):
             (flag, error) = processData()
             if flag:
                 ft.app(target=errorWindow)
-            page.window_destroy()
+            page.window.destroy()
         def back_button_clicked(e):
             page.go("/view10")
         appBar = ft.AppBar(
                 title=ft.Text("定義一覧"),
-                bgcolor=ft.colors.AMBER,
+                bgcolor=ft.Colors.AMBER,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=help_icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=help_icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
         execButton = ft.ElevatedButton(text="Execute", on_click=exec_button_clicked)
         backButton = ft.ElevatedButton(text="Back", on_click=back_button_clicked)
-        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
         row = ft.Row([execButton, backButton, finish_button])
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         win = [appBar, row, line, lv]
@@ -964,4 +964,5 @@ if __name__ == '__main__':
         ft.app(target=errorWindow)
     else:
         ft.app(target=mainWindow)
+
 

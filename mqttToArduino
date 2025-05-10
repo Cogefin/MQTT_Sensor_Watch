@@ -310,13 +310,13 @@ def load_init_file(help_file_name):
 def errorWindow(page: ft.Page):
     global error
     page.title = "Error"
-    page.window_width = 400
-    page.window_height = 500
+    page.window.width = 400
+    page.window.height = 500
     page.autoscroll = True
-    appBar = ft.AppBar(title=ft.Text("Error"),bgcolor=ft.colors.RED)
+    appBar = ft.AppBar(title=ft.Text("Error"),bgcolor=ft.Colors.RED)
     error_field = ft.Text(error)
     line = ft.Divider(height=2, color="black")
-    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
     page.add(
         appBar,
         error_field,
@@ -334,15 +334,15 @@ def icon_clicked(e):
     #            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
     #        )
     #    ],
-    #    page_props={"window_width":800},
+    #    page_props={"window.width":800},
     #)
     #p.start()
 
 def helpWindow(page: ft.Page):
     global helpPageName, help
     page.title = "Help"
-    page.window_width = 800
-    page.window_height = 500
+    page.window.width = 800
+    page.window.height = 500
     page.autoscroll = True
     help_contents = ft.Markdown(help[helpPageName], selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB)
     page.add(help_contents)
@@ -375,22 +375,22 @@ def mainWindow(page: ft.Page):
             mqttTimeout = int(config['mqtt']['timeout'])
             if '' != error:
                 ft.app(target=errorWindow)
-                page.window_destroy()
+                page.window.destroy()
             else:
                 page.go("/view20")
 
         appBar = ft.AppBar(
                 title=ft.Text("Load config file."),
-                bgcolor=ft.colors.BLUE,
+                bgcolor=ft.Colors.BLUE,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         subTitle1 = ft.Text("Configuration file selection.", style=ft.TextThemeStyle.TITLE_MEDIUM)
         pick_input_file_dialog = ft.FilePicker(on_result=pick_input_file_result)
         config_file_button = ft.ElevatedButton(
                 "configuration file",
-                icon=ft.icons.UPLOAD_FILE,
+                icon=ft.Icons.UPLOAD_FILE,
                 on_click=lambda _: pick_input_file_dialog.pick_files(
                     allow_multiple=False,
                 ),
@@ -398,12 +398,12 @@ def mainWindow(page: ft.Page):
         selected_input_file = ft.Text()
         line = ft.Divider(height=2, color="black")
 
-        page.window_width = 400
-        page.window_height = 500
+        page.window.width = 400
+        page.window.height = 500
         page.overlay.append(pick_input_file_dialog)
 
         next_button = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
         warning_message = ft.Text()
         row = ft.Row(
                 [
@@ -413,15 +413,17 @@ def mainWindow(page: ft.Page):
             )
         
         helpPageName = 'loadConfig'
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(subTitle1)
+        lv.controls.append(config_file_button)
+        lv.controls.append(selected_input_file)
+        lv.controls.append(line)
         return ft.View("/view10", [
             appBar,
             row,
             warning_message,
             line,
-            subTitle1,
-            config_file_button,
-            selected_input_file,
-            line
+            lv
         ])
 
     def createView20():
@@ -430,15 +432,15 @@ def mainWindow(page: ft.Page):
             page.go("/view30")
         appBar = ft.AppBar(
                 title=ft.Text("Config parameters."),
-                bgcolor=ft.colors.BLUE,
+                bgcolor=ft.Colors.BLUE,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         next_button = ft.ElevatedButton(text="next", on_click=next_button_clicked)
-        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
         row = ft.Row(
                 [
                     next_button,
@@ -667,15 +669,15 @@ def mainWindow(page: ft.Page):
 
         appBar = ft.AppBar(
                 title=ft.Text("Relay sensor data"),
-                bgcolor=ft.colors.BLUE,
+                bgcolor=ft.Colors.BLUE,
                 actions=[
-                    ft.IconButton(icon = ft.icons.HELP_CENTER, on_click=icon_clicked),
+                    ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
         line = ft.Divider(height=2, color="black")
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         exec_button = ft.ElevatedButton(text="exec", on_click=exec_button_clicked)
-        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window_destroy())
+        finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
         row = ft.Row(
                 [
                     exec_button,
@@ -700,6 +702,7 @@ def mainWindow(page: ft.Page):
             page.views.append(createView20())
         elif troute.match("/view30"):
             page.views.append(createView30())
+        page.update()
     page.on_route_change = route_change
     page.title = "Sensor data relay from Mqtt to Arduino cloud."
     page.go("/view10")
