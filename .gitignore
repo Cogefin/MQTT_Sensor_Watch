@@ -173,6 +173,7 @@ backup
 /test
 /work
 /tmp
+/exp
 
 # pythonから変換したexeを取り込まないための定義
 *.exe
