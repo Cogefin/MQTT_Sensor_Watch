@@ -7,11 +7,14 @@ import sys
 
 import http.server
 import socketserver
+import webbrowser
 
 help_file_name="Help/webServer.yaml"
 
 PORT = 8000
 DIRECTORY = ""
+
+url = "http://localhost:" + str(PORT)
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -66,7 +69,7 @@ def fileWindow(page: ft.Page):
         selected_directory.update()
 
     def exec_button_clicked(e):
-        global DIRECTORY
+        global DIRECTORY, httpd, url
         if (DIRECTORY==""):
             warning_message.value = "Please select input file."
             warning_message.update()
@@ -74,8 +77,13 @@ def fileWindow(page: ft.Page):
         with socketserver.TCPServer(("", PORT), Handler) as httpd:
             warning_message.value = "Simple web server start at localhost:"+str(PORT)
             warning_message.update()
-            #print("serving at port", PORT)
+            webbrowser.open(url, new=0, autoraise=True)
             httpd.serve_forever()
+
+    def finish_button_clicked(e):
+        global httpd
+        httpd.shutdown()
+        page.window.destroy()
 
     appBar = ft.AppBar(
             title=ft.Text("Simple data visualization HTTP Server"),
@@ -110,7 +118,7 @@ def fileWindow(page: ft.Page):
                 warning_message,
             ]
         )
-    finish_button = ft.ElevatedButton(text="finish", on_click=lambda e: page.window.destroy())
+    finish_button = ft.ElevatedButton(text="finish", on_click=finish_button_clicked)
     lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
     lv.controls.append(subTitle1)
     lv.controls.append(config_file_button)
