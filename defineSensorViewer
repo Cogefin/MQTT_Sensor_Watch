@@ -6,6 +6,8 @@ import flet as ft
 import yaml
 import re
 
+import datetime
+
 help_file="Help/defineSensorViewer.yaml"
 
 def loadHelp(helpFile):
@@ -283,6 +285,8 @@ def dumpDefinitions():
     print("-----------------------------------------------")
 
 def outputConfig(output_file_name):
+    global startEpochTime
+    endEpochTime = int(datetime.datetime.now().timestamp())
     #dumpDefinitions()
     try:
         outputFile = open(output_file_name, 'w', encoding='UTF-8')
@@ -308,6 +312,11 @@ def outputConfig(output_file_name):
     print(page_title, file=outputFile)
     print(data_file_type, file=outputFile)
     print(data_file_name, file=outputFile)
+    print('timeInfo:', file=outputFile)
+    print('  {', file=outputFile)
+    print('    defStartEpochTime : '+str(startEpochTime)+' ,', file=outputFile)
+    print('    defEndEpochTime : '+str(endEpochTime)+' ,', file=outputFile)
+    print('  }', file=outputFile)
     # 監視対象のセンサの定義
     print('#', file=outputFile)
     print('# 監視対象のセンサの定義', file=outputFile)
@@ -2499,6 +2508,8 @@ def mainWindow(page: ft.Page):
     page.go("/view5")
 
 if __name__ == '__main__':
+    global startEpochTime
+    startEpochTime = int(datetime.datetime.now().timestamp())
     error = loadHelp(help_file)
     if error != "":
         ft.app(target=errorWindow)

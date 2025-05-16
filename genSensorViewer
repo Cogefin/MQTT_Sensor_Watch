@@ -6,9 +6,10 @@ import flet as ft
 
 import yaml
 import sys
+import datetime
+
 
 parts_file_name="plugin/genSensorViewer.js"
-
 help_file_name="Help/genSensorViewer.yaml"
 
 
@@ -49,12 +50,14 @@ def open_config_and_output_file(config_file_name, output_file_name):
             config = yaml.safe_load(f)
     except Exception as e:
         error = 'Exception occurred while loading config file of this application...'
-        return [error , config, null]
+        return [error , config, ]
+        #return [error , config, null]
     try:
         outputFile = open(output_file_name, 'w', encoding='UTF-8')
     except Exception as e:
         error = 'Exception occurred while open output file...'
-        return [error , config, null]
+        return [error , config, ]
+        #return [error , config, null]
     return ['', config, outputFile]
 
 def load_init_file(help_file_name, parts_file_name):
@@ -82,6 +85,16 @@ def load_init_file(help_file_name, parts_file_name):
     return ['', help, parts]
 
 def outputHTML(config, parts, outputFile):
+    global startEpochTime
+    endEpochTime = int(datetime.datetime.now().timestamp())
+    print('<!--', file=outputFile)
+    print('defStartEpochTime: '+str(config['timeInfo']['defStartEpochTime']), file=outputFile)
+    print('defEndEpochTime: '+str(config['timeInfo']['defEndEpochTime']), file=outputFile)
+    print('genStartEpochTime: '+str(startEpochTime), file=outputFile)
+    print('genEndEpochTime: '+str(endEpochTime), file=outputFile)
+    totalTime = (config['timeInfo']['defEndEpochTime'] - config['timeInfo']['defStartEpochTime']) + (endEpochTime - startEpochTime)
+    print('totalTime: '+str(totalTime), file=outputFile)
+    print('-->', file=outputFile)
     print('<html>', file=outputFile)
     print('    <head>', file=outputFile)
     print('        <meta charset=\"UTF-8\">', file=outputFile)
@@ -501,7 +514,8 @@ def fileWindow(page: ft.Page):
     )
 
 if __name__ == "__main__":
-    global error, help, parts
+    global error, help, parts, startEpochTime
+    startEpochTime = int(datetime.datetime.now().timestamp())
     [error, help, parts] = load_init_file(help_file_name, parts_file_name)
     if "" == error:
         ft.app(target=fileWindow)
