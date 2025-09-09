@@ -37,18 +37,6 @@ def errorWindow(page: ft.Page):
 
 def icon_clicked(e):
     ft.app(target=helpWindow)
-    #global helpPageName, help
-    #p = subPage(
-    #    controls=[
-    #       ft.Markdown(
-    #            help[helpPageName],
-    #            selectable=True,
-    #            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
-    #        )
-    #    ],
-    #    page_props={"window.width":800},
-    #)
-    #p.start()
 
 def helpWindow(page: ft.Page):
     global helpPageName, help
@@ -115,8 +103,8 @@ sensorTypeNumber = {
 sensorTypeText = {
     'ACCELEROMETER'         : '3軸加速度' ,
     'GYROSCOPE'             : '3軸ジャイロ' ,
-    'LIGHT'                 : '光センサ' ,
-    'PRESSURE'              : '気圧センサ' ,
+    'LIGHT'                 : '明るさ' ,
+    'PRESSURE'              : '気圧' ,
     'LINEAR_ACCELERATION'   : '1軸リニア加速度' ,
     'RELATIVE_HUMIDITY'     : '湿度' ,
     'AMBIENT_TEMPERATURE'   : '気温' ,
@@ -778,7 +766,8 @@ def mainWindow(page: ft.Page):
                     ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
 
         subTitle0 = ft.Text('ページタイトル', size=24)
@@ -826,8 +815,11 @@ def mainWindow(page: ft.Page):
         lv.controls.append(description4)
         lv.controls.append(radioButton)
         lv.controls.append(fileNameBox)
-        tmp = [appBar, nextButton, errorField, line, lv]
-        #tmp = [appBar, nextButton, errorField, line, subTitle0, description0, pageTitleBox, line, subTitle1, description1, timeRangeBox, line, subTitle2, description2, decimalPointBox, line, subTitle3, description3, intervalBox, subTitle4, description4, radioButton, fileNameBox]
+        lv.controls.append(line)
+        lv.controls.append(errorField)
+        lv.controls.append(nextButton)
+        #tmp = [appBar, nextButton, errorField, line, lv]
+        tmp = [appBar, lv]
         helpPageName = 'general'
         page.window.height = 1050
         return ft.View("/view5", tmp)
@@ -837,7 +829,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkTargetFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 expandSensorTarget()
@@ -882,24 +874,38 @@ def mainWindow(page: ft.Page):
         idBox = ft.TextField(label='センサID')
         targetSensorID.append(idBox)
         line = ft.Divider(height=2, color="black")
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
         if 1==len(targetTopic):
-            tmp = [appBar , addButton, errorField , line]
+            #tmp = [appBar , addButton, errorField , line]
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
+            tmp = [appBar]
         else:
-            tmp = [appBar , addButton, row ,errorField, line]
+            #tmp = [appBar , addButton, row ,errorField, line]
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
+            tmp = [appBar]
         for i in range(len(targetTopic)):
             lv.controls.append(ft.Text('監視対象'+str(i+1)))
             lv.controls.append(targetTopic[i])
             lv.controls.append(targetSensorType[i])
             lv.controls.append(targetSensorID[i])
             lv.controls.append(line)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
         tmp.append(lv)
-        tmp.append(nextButton)
+        #tmp.append(nextButton)
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName = 'target'
@@ -910,7 +916,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkTargetFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 expandSensorTarget()
@@ -934,7 +940,6 @@ def mainWindow(page: ft.Page):
             targetTopic.pop(num-1)
             targetSensorID.pop(num-1)
             targetSensorType.pop(num-1)
-            #print(targetTopic)
             page.go("/view12")
         appBar = ft.AppBar(
                 title=ft.Text("監視対象センサ選択"),
@@ -956,24 +961,38 @@ def mainWindow(page: ft.Page):
         idBox = ft.TextField(label='センサID')
         targetSensorID.append(idBox)
         line = ft.Divider(height=2, color="black")
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
         if 1==len(targetTopic):
-            tmp = [appBar , addButton, errorField , line]
+            #tmp = [appBar , addButton, errorField , line]
+            tmp = [appBar]
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         else:
-            tmp = [appBar , addButton, row ,errorField, line]
+            #tmp = [appBar , addButton, row ,errorField, line]
+            tmp = [appBar]
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         for i in range(len(targetTopic)):
             lv.controls.append(ft.Text('監視対象'+str(i+1)))
             lv.controls.append(targetTopic[i])
             lv.controls.append(targetSensorType[i])
             lv.controls.append(targetSensorID[i])
             lv.controls.append(line)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
         tmp.append(lv)
-        tmp.append(nextButton)
+        #tmp.append(nextButton)
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName = 'target'
@@ -984,7 +1003,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkTargetFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 expandSensorTarget()
@@ -1018,24 +1037,37 @@ def mainWindow(page: ft.Page):
             )
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         line = ft.Divider(height=2, color="black")
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
         addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
         if 1==len(targetTopic):
-            tmp = [appBar , addButton, errorField , line]
+            #tmp = [appBar , addButton, errorField , line]
+            tmp = [appBar]
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         else:
+            #tmp = [appBar , addButton, row ,errorField, line]
             tmp = [appBar , addButton, row ,errorField, line]
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         for i in range(len(targetTopic)):
             lv.controls.append(ft.Text('監視対象'+str(i+1)))
             lv.controls.append(targetTopic[i])
             lv.controls.append(targetSensorType[i])
             lv.controls.append(targetSensorID[i])
             lv.controls.append(line)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
         tmp.append(lv)
-        tmp.append(nextButton)
+        #tmp.append(nextButton)
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName = 'target'
@@ -1046,7 +1078,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkTargetFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 expandSensorTarget()
@@ -1078,24 +1110,37 @@ def mainWindow(page: ft.Page):
             )
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         line = ft.Divider(height=2, color="black")
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
         addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
         if 1==len(targetTopic):
-            tmp = [appBar , addButton, errorField , line]
+            #tmp = [appBar , addButton, errorField , line]
+            tmp = [appBar]
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         else:
-            tmp = [appBar , addButton, row ,errorField, line]
+            #tmp = [appBar , addButton, row ,errorField, line]
+            tmp = [appBar]
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         for i in range(len(targetTopic)):
             lv.controls.append(ft.Text('監視対象'+str(i+1)))
             lv.controls.append(targetTopic[i])
             lv.controls.append(targetSensorType[i])
             lv.controls.append(targetSensorID[i])
             lv.controls.append(line)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
         tmp.append(lv)
-        tmp.append(nextButton)
+        #tmp.append(nextButton)
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName = 'target'
@@ -1126,7 +1171,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkPreProcessFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 expandPreProcessData()
@@ -1138,18 +1183,24 @@ def mainWindow(page: ft.Page):
                     ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('監視対象センサから出力されるデータの系列', size=24)    
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(dataSource)):
-            lv1.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
+            lv.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
         subTitle2 = ft.Text('抽出するデータ系列', size=24)
         comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
-        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         seqSelect = ft.Dropdown(
             label="データ系列",
             autofocus=True,
@@ -1172,19 +1223,33 @@ def mainWindow(page: ft.Page):
         optionInput = ft.TextField(label='移動平均のレンジ(過去何個分か)',value='')
         preProcessOption.append(optionInput)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
+        lv.controls.append(line)
+        lv.controls.append(subTitle2)
+        lv.controls.append(comment1)
+        lv.controls.append(addButton)
         if 1==len(preProcessData):
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            tmp = [appBar]
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         else:
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            tmp = [appBar]
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         for i in range(len(preProcessData)):
-            lv2.controls.append(ft.Text('抽出系列'+str(i+1)))
-            lv2.controls.append(preProcessData[i])
-            lv2.controls.append(preProcessMethod[i])
-            lv2.controls.append(preProcessOption[i])
-            lv2.controls.append(line)
-        tmp.append(lv2)
-        tmp.append(nextButton)
+            lv.controls.append(ft.Text('抽出系列'+str(i+1)))
+            lv.controls.append(preProcessData[i])
+            lv.controls.append(preProcessMethod[i])
+            lv.controls.append(preProcessOption[i])
+            lv.controls.append(line)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
+        tmp.append(lv)
+        #tmp.append(nextButton)
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='preProcess'
@@ -1215,7 +1280,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkPreProcessFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 expandPreProcessData()
@@ -1229,16 +1294,23 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('監視対象センサから出力されるデータの系列', size=24)
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(dataSource)):
-            lv1.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
+            #lv1.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
+            lv.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
         subTitle2 = ft.Text('抽出するデータ系列', size=24)
         comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
-        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         seqSelect = ft.Dropdown(
             label="データ系列",
             autofocus=True,
@@ -1261,19 +1333,38 @@ def mainWindow(page: ft.Page):
         optionInput = ft.TextField(label='移動平均のレンジ(過去何個分か)',value='')
         preProcessOption.append(optionInput)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
         if 1==len(preProcessData):
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            tmp = [appBar]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         else:
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            tmp = [appBar]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         for i in range(len(preProcessData)):
-            lv2.controls.append(ft.Text('抽出系列'+str(i+1)))
-            lv2.controls.append(preProcessData[i])
-            lv2.controls.append(preProcessMethod[i])
-            lv2.controls.append(preProcessOption[i])
-            lv2.controls.append(line)
-        tmp.append(lv2)
-        tmp.append(nextButton)
+            lv.controls.append(ft.Text('抽出系列'+str(i+1)))
+            lv.controls.append(preProcessData[i])
+            lv.controls.append(preProcessMethod[i])
+            lv.controls.append(preProcessOption[i])
+            lv.controls.append(line)
+        #tmp.append(lv2)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
+        tmp.append(lv)
+        #tmp.append(nextButton)
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='preProcess'
@@ -1304,7 +1395,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkPreProcessFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 expandPreProcessData()
@@ -1318,30 +1409,54 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('監視対象センサから出力されるデータの系列', size=24)
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(dataSource)):
-            lv1.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
+            lv.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
         subTitle2 = ft.Text('抽出するデータ系列', size=24)
         comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
-        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
         if 1==len(preProcessData):
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            tmp = [appBar]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         else:
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            tmp = [appBar]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         for i in range(len(preProcessData)):
-            lv2.controls.append(ft.Text('抽出系列'+str(i+1)))
-            lv2.controls.append(preProcessData[i])
-            lv2.controls.append(preProcessMethod[i])
-            lv2.controls.append(preProcessOption[i])
-            lv2.controls.append(line)
-        tmp.append(lv2)
-        tmp.append(nextButton)
+            lv.controls.append(ft.Text('抽出系列'+str(i+1)))
+            lv.controls.append(preProcessData[i])
+            lv.controls.append(preProcessMethod[i])
+            lv.controls.append(preProcessOption[i])
+            lv.controls.append(line)
+        #tmp.append(lv2)
+        #tmp.append(nextButton)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
+        tmp.append(lv)
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='preProcess'
@@ -1372,7 +1487,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkPreProcessFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 expandPreProcessData()
@@ -1387,30 +1502,53 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('監視対象センサから出力されるデータの系列', size=24)
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(dataSource)):
-            lv1.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
+            lv.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
         subTitle2 = ft.Text('抽出するデータ系列', size=24)
         comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
-        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
         if 1==len(preProcessData):
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            tmp = [appBar]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         else:
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            tmp = [appBar]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         for i in range(len(preProcessData)):
-            lv2.controls.append(ft.Text('抽出系列'+str(i+1)))
-            lv2.controls.append(preProcessData[i])
-            lv2.controls.append(preProcessMethod[i])
-            lv2.controls.append(preProcessOption[i])
-            lv2.controls.append(line)
-        tmp.append(lv2)
-        tmp.append(nextButton)
+            lv.controls.append(ft.Text('抽出系列'+str(i+1)))
+            lv.controls.append(preProcessData[i])
+            lv.controls.append(preProcessMethod[i])
+            lv.controls.append(preProcessOption[i])
+            lv.controls.append(line)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
+        tmp.append(lv)
+        #tmp.append(nextButton)
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='preProcess'
@@ -1431,14 +1569,25 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(preProcessDataName)):
-            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('統計値算出の選択', size=24)
         comment1 = ft.Text('上記のデータ系列の統計値を算出するか否か選択してください．．')
         noButton = ft.ElevatedButton(text="作成しない", on_click=no_button_clicked)
         yesButton = ft.ElevatedButton(text="作成する", on_click=yes_button_clicked)
-        tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, yesButton, noButton]
+        row = ft.Row([yesButton, noButton])
+        #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, yesButton, noButton]
+        lv.controls.append(line)
+        lv.controls.append(subTitle2)
+        lv.controls.append(comment1)
+        lv.controls.append(row)
+        #lv.controls.append(yesButton)
+        #lv.controls.append(noButton)
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='statisticsSwitch'
@@ -1474,7 +1623,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkStatisticsFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 page.go("/view40")
@@ -1487,22 +1636,41 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(preProcessDataName)):
-            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
         comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
         if 1==len(statisticsData):
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         else:
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
-        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
+        #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         seqSelect = ft.Dropdown(
             label="前処理済みデータ系列",
             autofocus=True,
@@ -1521,16 +1689,19 @@ def mainWindow(page: ft.Page):
         statistics_v_Title_Box = ft.TextField(label='度数分布グラフ縦軸見出し',value='')
         statistics_v_Title.append(statistics_v_Title_Box)
         for i in range(len(statisticsData)):
-            lv2.controls.append(ft.Text('対象データ'+str(i+1)))
-            lv2.controls.append(statisticsData[i])
-            lv2.controls.append(statisticsLabel[i])
-            lv2.controls.append(statisticsUnits[i])
-            lv2.controls.append(statisticsTitle[i])
-            lv2.controls.append(statistics_h_Title[i])
-            lv2.controls.append(statistics_v_Title[i])
-            lv2.controls.append(line)
-        tmp.append(lv2)
-        tmp.append(nextButton)
+            lv.controls.append(ft.Text('対象データ'+str(i+1)))
+            lv.controls.append(statisticsData[i])
+            lv.controls.append(statisticsLabel[i])
+            lv.controls.append(statisticsUnits[i])
+            lv.controls.append(statisticsTitle[i])
+            lv.controls.append(statistics_h_Title[i])
+            lv.controls.append(statistics_v_Title[i])
+            lv.controls.append(line)
+        #tmp.append(lv2)
+        #tmp.append(nextButton)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='statisticsData'
@@ -1566,7 +1737,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkStatisticsFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 page.go("/view40")
@@ -1579,22 +1750,40 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
         for i in range(len(preProcessDataName)):
-            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
         comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
         if 1==len(statisticsData):
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         else:
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
-        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
+        #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         seqSelect = ft.Dropdown(
             label="前処理済みデータ系列",
             autofocus=True,
@@ -1613,16 +1802,19 @@ def mainWindow(page: ft.Page):
         statistics_v_Title_Box = ft.TextField(label='度数分布グラフ縦軸見出し',value='')
         statistics_v_Title.append(statistics_v_Title_Box)
         for i in range(len(statisticsData)):
-            lv2.controls.append(ft.Text('対象データ'+str(i+1)))
-            lv2.controls.append(statisticsData[i])
-            lv2.controls.append(statisticsLabel[i])
-            lv2.controls.append(statisticsUnits[i])
-            lv2.controls.append(statisticsTitle[i])
-            lv2.controls.append(statistics_h_Title[i])
-            lv2.controls.append(statistics_v_Title[i])
-            lv2.controls.append(line)
-        tmp.append(lv2)
-        tmp.append(nextButton)
+            lv.controls.append(ft.Text('対象データ'+str(i+1)))
+            lv.controls.append(statisticsData[i])
+            lv.controls.append(statisticsLabel[i])
+            lv.controls.append(statisticsUnits[i])
+            lv.controls.append(statisticsTitle[i])
+            lv.controls.append(statistics_h_Title[i])
+            lv.controls.append(statistics_v_Title[i])
+            lv.controls.append(line)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
+        #tmp.append(lv2)
+        #tmp.append(nextButton)
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='statisticsData'
@@ -1658,7 +1850,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkStatisticsFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 page.go("/view40")
@@ -1671,33 +1863,55 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(preProcessDataName)):
-            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
         comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
         if 1==len(statisticsData):
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         else:
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
-        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
+        #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         for i in range(len(statisticsData)):
-            lv2.controls.append(ft.Text('対象データ'+str(i+1)))
-            lv2.controls.append(statisticsData[i])
-            lv2.controls.append(statisticsLabel[i])
-            lv2.controls.append(statisticsUnits[i])
-            lv2.controls.append(statisticsTitle[i])
-            lv2.controls.append(statistics_h_Title[i])
-            lv2.controls.append(statistics_v_Title[i])
-            lv2.controls.append(line)
-        tmp.append(lv2)
-        tmp.append(nextButton)
+            lv.controls.append(ft.Text('対象データ'+str(i+1)))
+            lv.controls.append(statisticsData[i])
+            lv.controls.append(statisticsLabel[i])
+            lv.controls.append(statisticsUnits[i])
+            lv.controls.append(statisticsTitle[i])
+            lv.controls.append(statistics_h_Title[i])
+            lv.controls.append(statistics_v_Title[i])
+            lv.controls.append(line)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
+        #tmp.append(lv2)
+        #tmp.append(nextButton)
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='statisticsData'
@@ -1733,7 +1947,7 @@ def mainWindow(page: ft.Page):
         def next_button_clicked(e):
             (flag, val) = checkStatisticsFields()
             if flag:
-                errorField.value = val
+                nextErrorField.value = val
                 page.update()
             else:
                 page.go("/view40")
@@ -1746,33 +1960,55 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(preProcessDataName)):
-            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
         comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
         deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
         if 1==len(statisticsData):
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, errorField, line]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
         else:
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
-        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, addButton, row, errorField, line]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+            lv.controls.append(line)
+        #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         for i in range(len(statisticsData)):
-            lv2.controls.append(ft.Text('対象データ'+str(i+1)))
-            lv2.controls.append(statisticsData[i])
-            lv2.controls.append(statisticsLabel[i])
-            lv2.controls.append(statisticsUnits[i])
-            lv2.controls.append(statisticsTitle[i])
-            lv2.controls.append(statistics_h_Title[i])
-            lv2.controls.append(statistics_v_Title[i])
-            lv2.controls.append(line)
-        tmp.append(lv2)
-        tmp.append(nextButton)
+            lv.controls.append(ft.Text('対象データ'+str(i+1)))
+            lv.controls.append(statisticsData[i])
+            lv.controls.append(statisticsLabel[i])
+            lv.controls.append(statisticsUnits[i])
+            lv.controls.append(statisticsTitle[i])
+            lv.controls.append(statistics_h_Title[i])
+            lv.controls.append(statistics_v_Title[i])
+            lv.controls.append(line)
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
+        tmp = [appBar, lv]
+        #tmp.append(lv2)
+        #tmp.append(nextButton)
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='statisticsData'
@@ -1806,15 +2042,27 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(preProcessDataName)):
-            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
-        subTitle2 = ft.Text('作成するグラフ数の選択', size=24)
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+        subTitle2 = ft.Text('時系列グラフの数', size=24)
         comment1 = ft.Text('上記のデータ系列から，何個の時系列グラフを作成するか入力してください．作成しない場合は，「0」を入力してください．')
         inputBox = ft.TextField(label='グラフ数',value='')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
-        tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, inputBox, errorField, line, nextButton]
+        #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, inputBox, errorField, line, nextButton]
+        lv.controls.append(line)
+        lv.controls.append(subTitle2)
+        lv.controls.append(comment1)
+        lv.controls.append(inputBox)
+        lv.controls.append(line)
+        lv.controls.append(errorField)
+        lv.controls.append(nextButton)
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='numOfTimeSeriesGraph'
@@ -1826,7 +2074,7 @@ def mainWindow(page: ft.Page):
             global timeSeriesGraphButtonState
             (flag, msg) = checkTimeSeriesGraphFields()
             if flag:
-                errorField.value = msg
+                nextErrorField.value = msg
                 page.update()
             else:
                 if len(timeSeriesGraphTitle) == numOfTimeSeriesGraph:
@@ -1875,9 +2123,12 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('前処理済みデータ系列', size=24)
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(preProcessDataName)):
-            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         comment1 = ft.Text('グラフのタイトルやどの前処理済みデータ系列を用いるかを定義してください．')
         index = len(timeSeriesGraphTitle)-1
         if (timeSeriesGraphButtonState==1) or  (timeSeriesGraphButtonState==0):
@@ -1892,18 +2143,46 @@ def mainWindow(page: ft.Page):
             timeSeriesGraph_h_Title.append(hTitleBox)
             timeSeriesGraph_v_Title.append(vTitleBox)
         subTitle2 = ft.Text('時系列グラフ'+str(len(timeSeriesGraphTitle))+'番目の定義', size=24)
-        subTitle3 = ft.Text('前処理済みデータ系列の選択', size=24) 
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="描画対象系列追加", on_click=add_button_clicked)
+        subTitle3 = ft.Text('前処理済みデータ系列の選択', size=24)
+        if len(timeSeriesGraphTitle) == numOfTimeSeriesGraph:
+            nextButtonTitle = "時系列グラフ定義終了"
+        else:
+            nextButtonTitle = "次のグラフ"
+        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="描画対象系列追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象グラフ系列番号',value='')
         deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
         row = ft.Row([deleteBox, deleteButton])
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         if (timeSeriesGraphButtonState==-1) or (timeSeriesGraphButtonState==2):
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, errorField]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, errorField]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(titleBox)
+            lv.controls.append(hTitleBox)
+            lv.controls.append(vTitleBox)
+            lv.controls.append(line)
+            lv.controls.append(subTitle3)
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
         else:
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, row, errorField]
-        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, row, errorField]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(titleBox)
+            lv.controls.append(hTitleBox)
+            lv.controls.append(vTitleBox)
+            lv.controls.append(line)
+            lv.controls.append(subTitle3)
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+        #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         seqSelect = ft.Dropdown(
             label="前処理済みデータ系列",
             autofocus=True,
@@ -1921,11 +2200,14 @@ def mainWindow(page: ft.Page):
                 timeSeriesGraphLabel.append([labelBox])
         last = len(timeSeriesGraphData)-1
         for i in range(len(timeSeriesGraphData[last])):
-            lv2.controls.append(ft.Text('グラフ系列'+str(i+1)))
-            lv2.controls.append(timeSeriesGraphData[last][i])
-            lv2.controls.append(timeSeriesGraphLabel[last][i])
-        tmp.append(lv2)
-        tmp.append(nextButton)
+            lv.controls.append(ft.Text('グラフ系列'+str(i+1)))
+            lv.controls.append(timeSeriesGraphData[last][i])
+            lv.controls.append(timeSeriesGraphLabel[last][i])
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
+        #tmp.append(lv2)
+        #tmp.append(nextButton)
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='timeSeriesGraph'
@@ -1937,7 +2219,7 @@ def mainWindow(page: ft.Page):
             global timeSeriesGraphButtonState
             (flag, msg) = checkTimeSeriesGraphFields()
             if flag:
-                errorField.value = msg
+                nextErrorField.value = msg
                 page.update()
             else:
                 if len(timeSeriesGraphTitle) == numOfTimeSeriesGraph:
@@ -1986,9 +2268,12 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('前処理済みデータ系列', size=24)
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(preProcessDataName)):
-            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         comment1 = ft.Text('グラフのタイトルやどの前処理済みデータ系列を用いるかを定義してください．')
         index = len(timeSeriesGraphTitle)-1
         if (timeSeriesGraphButtonState==1) or  (timeSeriesGraphButtonState==0):
@@ -2004,17 +2289,45 @@ def mainWindow(page: ft.Page):
             timeSeriesGraph_v_Title.append(vTitleBox)
         subTitle2 = ft.Text('時系列グラフ'+str(len(timeSeriesGraphTitle))+'番目の定義', size=24)
         subTitle3 = ft.Text('前処理済みデータ系列の選択', size=24) 
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        addButton = ft.ElevatedButton(text="描画対象系列追加", on_click=add_button_clicked)
+        if len(timeSeriesGraphTitle) == numOfTimeSeriesGraph:
+            nextButtonTitle = "時系列グラフ定義終了"
+        else:
+            nextButtonTitle = "次のグラフ"
+        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        addButtonParts = ft.ElevatedButton(text="描画対象系列追加", on_click=add_button_clicked)
+        addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象グラフ系列番号',value='')
         deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
         row = ft.Row([deleteBox, deleteButton])
         errorField = ft.Text('')
+        nextErrorField = ft.Text('')
         if (timeSeriesGraphButtonState==-1) or (timeSeriesGraphButtonState==2):
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, errorField]
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, errorField]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(titleBox)
+            lv.controls.append(hTitleBox)
+            lv.controls.append(vTitleBox)
+            lv.controls.append(line)
+            lv.controls.append(subTitle3)
+            lv.controls.append(addButton)
+            lv.controls.append(errorField)
         else:
-            tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, row, errorField]
-        lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+            #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, titleBox, hTitleBox, vTitleBox, line, subTitle3, addButton, row, errorField]
+            lv.controls.append(line)
+            lv.controls.append(subTitle2)
+            lv.controls.append(comment1)
+            lv.controls.append(titleBox)
+            lv.controls.append(hTitleBox)
+            lv.controls.append(vTitleBox)
+            lv.controls.append(line)
+            lv.controls.append(subTitle3)
+            lv.controls.append(addButton)
+            lv.controls.append(row)
+            lv.controls.append(errorField)
+        #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         seqSelect = ft.Dropdown(
             label="前処理済みデータ系列",
             autofocus=True,
@@ -2032,11 +2345,14 @@ def mainWindow(page: ft.Page):
                 timeSeriesGraphLabel.append([labelBox])
         last = len(timeSeriesGraphData)-1
         for i in range(len(timeSeriesGraphData[last])):
-            lv2.controls.append(ft.Text('グラフ系列'+str(i+1)))
-            lv2.controls.append(timeSeriesGraphData[last][i])
-            lv2.controls.append(timeSeriesGraphLabel[last][i])
-        tmp.append(lv2)
-        tmp.append(nextButton)
+            lv.controls.append(ft.Text('グラフ系列'+str(i+1)))
+            lv.controls.append(timeSeriesGraphData[last][i])
+            lv.controls.append(timeSeriesGraphLabel[last][i])
+        lv.controls.append(nextErrorField)
+        lv.controls.append(nextButton)
+        tmp = [appBar, lv]
+        #tmp.append(lv2)
+        #tmp.append(nextButton)
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='timeSeriesGraph'
@@ -2071,15 +2387,27 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('前処理済みデータ系列', size=24)    
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(preProcessDataName)):
-            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('相関分析を行うデータ系列の組み合わせ入力', size=24)
         comment1 = ft.Text('上記のデータ系列から，何組の相関分析を行うか入力してください．相関分析を行わない場合は，「0」を入力してください．')
         inputBox = ft.TextField(label='相関分析組み合わせ数',value='')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
-        tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, inputBox, errorField, line, nextButton]
+        #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, inputBox, errorField, line, nextButton]
+        lv.controls.append(line)
+        lv.controls.append(subTitle2)
+        lv.controls.append(comment1)
+        lv.controls.append(inputBox)
+        lv.controls.append(line)
+        lv.controls.append(errorField)
+        lv.controls.append(nextButton)
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='numOfCorrelationAnalysis'
@@ -2107,9 +2435,12 @@ def mainWindow(page: ft.Page):
             )
         subTitle0 = ft.Text('前処理済みデータ系列', size=24)
         comment0  = ft.Text('監視対象となる前処理済みのデータ')
-        lv0 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(subTitle0)
+        lv.controls.append(comment0)
         for i in range(len(preProcessDataName)):
-            lv0.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('データ系列の選択', size=24)
         subTitle2 = ft.Text('データ系列の名前定義', size=24)
@@ -2139,10 +2470,33 @@ def mainWindow(page: ft.Page):
         graph_h_TitleBox = ft.TextField(label='散布図横軸ラベル',value='')
         graph_v_TitleBox = ft.TextField(label='散布図縦軸ラベル',value='')
         correlationAnalysisGraphTitle.append((graphTitleBox,graph_h_TitleBox,graph_v_TitleBox))
-
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        if len(correlationAnalysisPair) == numOfCorrelationAnalysis:
+            nextButtonTitle = "散布図定義終了"
+        else:
+            nextButtonTitle = "次の散布図"
+        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
-        tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, data_h_Select, data_v_Select, subTitle2, comment2, dataLabel_h_Box, dataLabel_v_Box, line, subTitle3, comment3, graphTitleBox, graph_h_TitleBox, graph_v_TitleBox, line, errorField, nextButton]
+        #tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, data_h_Select, data_v_Select, subTitle2, comment2, dataLabel_h_Box, dataLabel_v_Box, line, subTitle3, comment3, graphTitleBox, graph_h_TitleBox, graph_v_TitleBox, line, errorField, nextButton]
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
+        lv.controls.append(comment1)
+        lv.controls.append(data_h_Select)
+        lv.controls.append(data_v_Select)
+        lv.controls.append(subTitle2)
+        lv.controls.append(comment2)
+        lv.controls.append(dataLabel_h_Box)
+        lv.controls.append(dataLabel_v_Box)
+        lv.controls.append(line)
+        lv.controls.append(subTitle3)
+        lv.controls.append(comment3)
+        lv.controls.append(graphTitleBox)
+        lv.controls.append(graph_h_TitleBox)
+        lv.controls.append(graph_v_TitleBox)
+        lv.controls.append(line)
+        lv.controls.append(errorField)
+        lv.controls.append(nextButton)
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='correlationAnalysis'
@@ -2170,9 +2524,12 @@ def mainWindow(page: ft.Page):
             )
         subTitle0 = ft.Text('前処理済みデータ系列', size=24)
         comment0  = ft.Text('監視対象となる前処理済みのデータ')
-        lv0 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(subTitle0)
+        lv.controls.append(comment0)
         for i in range(len(preProcessDataName)):
-            lv0.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('データ系列の選択', size=24)
         subTitle2 = ft.Text('データ系列の名前定義', size=24)
@@ -2202,10 +2559,33 @@ def mainWindow(page: ft.Page):
         graph_h_TitleBox = ft.TextField(label='散布図横軸ラベル',value='')
         graph_v_TitleBox = ft.TextField(label='散布図縦軸ラベル',value='')
         correlationAnalysisGraphTitle.append((graphTitleBox,graph_h_TitleBox,graph_v_TitleBox))
-
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        if len(correlationAnalysisPair) == numOfCorrelationAnalysis:
+            nextButtonTitle = "散布図定義終了"
+        else:
+            nextButtonTitle = "次の散布図"
+        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
-        tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, data_h_Select, data_v_Select, subTitle2, comment2, dataLabel_h_Box, dataLabel_v_Box, line, subTitle3, comment3, graphTitleBox, graph_h_TitleBox, graph_v_TitleBox, line, errorField, nextButton]
+        #tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, data_h_Select, data_v_Select, subTitle2, comment2, dataLabel_h_Box, dataLabel_v_Box, line, subTitle3, comment3, graphTitleBox, graph_h_TitleBox, graph_v_TitleBox, line, errorField, nextButton]
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
+        lv.controls.append(comment1)
+        lv.controls.append(data_h_Select)
+        lv.controls.append(data_v_Select)
+        lv.controls.append(subTitle2)
+        lv.controls.append(comment2)
+        lv.controls.append(dataLabel_h_Box)
+        lv.controls.append(dataLabel_v_Box)
+        lv.controls.append(line)
+        lv.controls.append(subTitle3)
+        lv.controls.append(comment3)
+        lv.controls.append(graphTitleBox)
+        lv.controls.append(graph_h_TitleBox)
+        lv.controls.append(graph_v_TitleBox)
+        lv.controls.append(line)
+        lv.controls.append(errorField)
+        lv.controls.append(nextButton)
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='correlationAnalysis'
@@ -2247,9 +2627,12 @@ def mainWindow(page: ft.Page):
             )
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('前処理済みデータ系列', size=24)
-        lv1 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
         for i in range(len(preProcessDataName)):
-            lv1.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('データの監視(エラーチェック)を行うルール数入力', size=24)
         comment2 = ft.Text('上記のデータ系列から，監視ルールの数を入力してください．監視を行わない場合は，「0」を入力してください．')
         ruleBox = ft.TextField(label='ルール数',value='')
@@ -2257,9 +2640,22 @@ def mainWindow(page: ft.Page):
         comment3 = ft.Text('ルールを構成するプログラムを作成するために，Javascriptのライブラリが必要な場合，その数を入力してください．不要な場合は「0」としてください．')
         comment4 = ft.Text('なお，定義無しに利用できるライブラリも存在するため，詳細はマニュアルやヘルプを参照してください．')
         libraryBox = ft.TextField(label='ライブラリ数',value='')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
-        tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment2, ruleBox, subTitle3, comment3, comment4, libraryBox, errorField, line, nextButton]
+        lv.controls.append(line)
+        lv.controls.append(subTitle2)
+        lv.controls.append(comment2)
+        lv.controls.append(ruleBox)
+        lv.controls.append(subTitle3)
+        lv.controls.append(comment3)
+        lv.controls.append(comment4)
+        lv.controls.append(libraryBox)
+        lv.controls.append(line)
+        lv.controls.append(errorField)
+        lv.controls.append(nextButton)
+        #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment2, ruleBox, subTitle3, comment3, comment4, libraryBox, errorField, line, nextButton]
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='numOfRule'
@@ -2290,9 +2686,12 @@ def mainWindow(page: ft.Page):
             )
         subTitle0 = ft.Text('前処理済みデータ系列', size=24)
         comment0  = ft.Text('監視対象となる前処理済みのデータ')
-        lv0 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(subTitle0)
+        lv.controls.append(comment0)
         for i in range(len(preProcessDataName)):
-            lv0.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('ルールの入力', size=24)
         subTitle2 = ft.Text('警告メッセージの入力', size=24)
@@ -2302,9 +2701,27 @@ def mainWindow(page: ft.Page):
         dataRule.append(ruleBox)
         messageBox = ft.TextField(label='警告メッセージ文面',value='')
         dataRuleMessage.append(messageBox)
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        if len(dataRule) == numOfRule:
+            nextButtonTitle = "ルール定義終了"
+        else:
+            nextButtonTitle = "次のルール"
+        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
-        tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, ruleBox, line, subTitle2, comment2, messageBox, line, errorField, nextButton]
+        #
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
+        lv.controls.append(comment1)
+        lv.controls.append(ruleBox)
+        lv.controls.append(line)
+        lv.controls.append(subTitle2)
+        lv.controls.append(comment2)
+        lv.controls.append(messageBox)
+        lv.controls.append(line)
+        lv.controls.append(errorField)
+        lv.controls.append(nextButton)
+        #tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, ruleBox, line, subTitle2, comment2, messageBox, line, errorField, nextButton]
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='dataRule'
@@ -2335,9 +2752,12 @@ def mainWindow(page: ft.Page):
             )
         subTitle0 = ft.Text('前処理済みデータ系列', size=24)
         comment0  = ft.Text('監視対象となる前処理済みのデータ')
-        lv0 = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(subTitle0)
+        lv.controls.append(comment0)
         for i in range(len(preProcessDataName)):
-            lv0.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
+            lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         line = ft.Divider(height=2, color="black")
         subTitle1 = ft.Text('ルールの入力', size=24)
         subTitle2 = ft.Text('警告メッセージの入力', size=24)
@@ -2347,9 +2767,27 @@ def mainWindow(page: ft.Page):
         dataRule.append(ruleBox)
         messageBox = ft.TextField(label='警告メッセージ文面',value='')
         dataRuleMessage.append(messageBox)
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        if len(dataRule) == numOfRule:
+            nextButtonTitle = "ルール定義終了"
+        else:
+            nextButtonTitle = "次のルール"
+        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
-        tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, ruleBox, line, subTitle2, comment2, messageBox, line, errorField, nextButton]
+        #
+        lv.controls.append(line)
+        lv.controls.append(subTitle1)
+        lv.controls.append(comment1)
+        lv.controls.append(ruleBox)
+        lv.controls.append(line)
+        lv.controls.append(subTitle2)
+        lv.controls.append(comment2)
+        lv.controls.append(messageBox)
+        lv.controls.append(line)
+        lv.controls.append(errorField)
+        lv.controls.append(nextButton)
+        #tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, ruleBox, line, subTitle2, comment2, messageBox, line, errorField, nextButton]
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='dataRule'
@@ -2373,7 +2811,9 @@ def mainWindow(page: ft.Page):
             )
         subTitle0 = ft.Text('ライブラリ定義', size=24)
         line = ft.Divider(height=2, color="black")
-        lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(subTitle0)
         for i in range(numOfLibraries):
             typeBox = ft.TextField(label='タイプ',value='')
             srcBox = ft.TextField(label='ライブラリソース(URL)',value='')
@@ -2392,8 +2832,13 @@ def mainWindow(page: ft.Page):
             lv.controls.append(crossoriginBox)
             lv.controls.append(referrerpolicyBox)
         errorField = ft.Text('')
-        nextButton = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
-        tmp = [appBar, subTitle0, lv, line, errorField, nextButton]
+        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButton = ft.Row([nextButtonParts])
+        #tmp = [appBar, subTitle0, lv, line, errorField, nextButton]
+        lv.controls.append(line)
+        lv.controls.append(errorField)
+        lv.controls.append(nextButton)
+        tmp = [appBar, lv]
         page.auto_scroll = True
         page.scroll = ft.ScrollMode.HIDDEN
         helpPageName='library'
@@ -2428,11 +2873,16 @@ def mainWindow(page: ft.Page):
         line = ft.Divider(height=2, color="black")
         subTitle = ft.Text('出力ファイル選択', size=24)
         pick_output_file_dialog = ft.FilePicker(on_result=pick_output_file_result)
-        pick_output_file_dialog_button = ft.ElevatedButton(
+        pick_output_file_dialog_buttonParts = ft.ElevatedButton(
             "output file",
             icon=ft.Icons.DOWNLOAD,
             on_click=lambda _: pick_output_file_dialog.save_file(
             ),
+        )
+        pick_output_file_dialog_button = ft.Row(
+            [
+                pick_output_file_dialog_buttonParts
+            ]
         )
         page.overlay.append(pick_output_file_dialog)
         selected_output_file = ft.Text()
@@ -2444,8 +2894,18 @@ def mainWindow(page: ft.Page):
                 warning_message,
             ]
         )
-        finish_button = ft.ElevatedButton(text="終了", on_click=lambda e: page.window.destroy())
-        tmp = [appBar, line, subTitle, pick_output_file_dialog_button, selected_output_file, row, finish_button ]
+        finish_button_parts = ft.ElevatedButton(text="終了", on_click=lambda e: page.window.destroy())
+        finish_button = ft.Row([finish_button_parts])
+        #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
+        lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        lv.controls.append(line)
+        lv.controls.append(subTitle)
+        lv.controls.append(pick_output_file_dialog_button)
+        lv.controls.append(selected_output_file)
+        lv.controls.append(row)
+        lv.controls.append(finish_button)
+        #tmp = [appBar, line, subTitle, pick_output_file_dialog_button, selected_output_file, row, finish_button ]
+        tmp = [appBar, lv]
         helpPageName='fileOutput'
         return ft.View("/view80", tmp)
 
