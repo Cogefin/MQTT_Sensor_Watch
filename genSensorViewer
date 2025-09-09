@@ -451,7 +451,6 @@ def fileWindow(page: ft.Page):
             ft.app(target=errorWindow)
         outputHTML(config, parts, outputFile)
         page.window.destroy()
-
     appBar = ft.AppBar(
             title=ft.Text("Generate viewer HTML page"),
             bgcolor=ft.Colors.BLUE,
