@@ -177,3 +177,5 @@ backup
 
 # pythonから変換したexeを取り込まないための定義
 *.exe
+
+*.pptx
