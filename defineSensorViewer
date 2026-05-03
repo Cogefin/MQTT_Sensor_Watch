@@ -27,7 +27,7 @@ def errorWindow(page: ft.Page):
     page.window.width = 400
     page.window.height = 500
     page.autoscroll = True
-    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
+    finish_button = ft.ElevatedButton("Close", on_click=lambda e: page.window.destroy())
     page.add(
         ft.AppBar(title=ft.Text("Error"),bgcolor=ft.Colors.RED),
         ft.Text(error),
@@ -766,7 +766,7 @@ def mainWindow(page: ft.Page):
                     ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
                 ]
             )
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
 
@@ -874,12 +874,12 @@ def mainWindow(page: ft.Page):
         idBox = ft.TextField(label='センサID')
         targetSensorID.append(idBox)
         line = ft.Divider(height=2, color="black")
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("監視対象追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("監視対象削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
@@ -961,12 +961,12 @@ def mainWindow(page: ft.Page):
         idBox = ft.TextField(label='センサID')
         targetSensorID.append(idBox)
         line = ft.Divider(height=2, color="black")
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("監視対象追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("監視対象削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
@@ -1037,11 +1037,11 @@ def mainWindow(page: ft.Page):
             )
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         line = ft.Divider(height=2, color="black")
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        addButton = ft.ElevatedButton("監視対象追加", on_click=add_button_clicked)
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("監視対象削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
@@ -1110,11 +1110,11 @@ def mainWindow(page: ft.Page):
             )
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         line = ft.Divider(height=2, color="black")
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButton = ft.ElevatedButton(text="監視対象追加", on_click=add_button_clicked)
+        addButton = ft.ElevatedButton("監視対象追加", on_click=add_button_clicked)
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="監視対象削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("監視対象削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
@@ -1194,12 +1194,12 @@ def mainWindow(page: ft.Page):
             lv.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
         subTitle2 = ft.Text('抽出するデータ系列', size=24)
         comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("抽出系列追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("系列削除", on_click=delete_button_clicked)
         #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         seqSelect = ft.Dropdown(
             label="データ系列",
@@ -1304,12 +1304,12 @@ def mainWindow(page: ft.Page):
             lv.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
         subTitle2 = ft.Text('抽出するデータ系列', size=24)
         comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("抽出系列追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("系列削除", on_click=delete_button_clicked)
         #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         seqSelect = ft.Dropdown(
             label="データ系列",
@@ -1417,12 +1417,12 @@ def mainWindow(page: ft.Page):
             lv.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
         subTitle2 = ft.Text('抽出するデータ系列', size=24)
         comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("抽出系列追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("系列削除", on_click=delete_button_clicked)
         #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
@@ -1510,12 +1510,12 @@ def mainWindow(page: ft.Page):
             lv.controls.append(ft.Text('データ系列'+str(i+1)+' : ' + dataSource[i]))
         subTitle2 = ft.Text('抽出するデータ系列', size=24)
         comment1 = ft.Text('グラフ化や統計情報を取得を行うデータ系列の選択')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("抽出系列追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("系列削除", on_click=delete_button_clicked)
         #lv2 = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
@@ -1577,8 +1577,8 @@ def mainWindow(page: ft.Page):
             lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('統計値算出の選択', size=24)
         comment1 = ft.Text('上記のデータ系列の統計値を算出するか否か選択してください．．')
-        noButton = ft.ElevatedButton(text="作成しない", on_click=no_button_clicked)
-        yesButton = ft.ElevatedButton(text="作成する", on_click=yes_button_clicked)
+        noButton = ft.ElevatedButton("作成しない", on_click=no_button_clicked)
+        yesButton = ft.ElevatedButton("作成する", on_click=yes_button_clicked)
         row = ft.Row([yesButton, noButton])
         #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, yesButton, noButton]
         lv.controls.append(line)
@@ -1644,12 +1644,12 @@ def mainWindow(page: ft.Page):
             lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
         comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("抽出系列追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("系列削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
@@ -1757,12 +1757,12 @@ def mainWindow(page: ft.Page):
             lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
         comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("抽出系列追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("系列削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
@@ -1871,12 +1871,12 @@ def mainWindow(page: ft.Page):
             lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
         comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("抽出系列追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("系列削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
@@ -1968,12 +1968,12 @@ def mainWindow(page: ft.Page):
             lv.controls.append(ft.Text('系列'+str(i+1)+' : ' + preProcessDataName[i]))
         subTitle2 = ft.Text('統計情報算出対象データ系列', size=24)
         comment1 = ft.Text('統計情報取得を行うデータ系列の選択')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="抽出系列追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("抽出系列追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象番号',value='')
-        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("系列削除", on_click=delete_button_clicked)
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
         row = ft.Row([deleteBox, deleteButton])
@@ -2051,7 +2051,7 @@ def mainWindow(page: ft.Page):
         subTitle2 = ft.Text('時系列グラフの数', size=24)
         comment1 = ft.Text('上記のデータ系列から，何個の時系列グラフを作成するか入力してください．作成しない場合は，「0」を入力してください．')
         inputBox = ft.TextField(label='グラフ数',value='')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
         #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, inputBox, errorField, line, nextButton]
@@ -2148,12 +2148,12 @@ def mainWindow(page: ft.Page):
             nextButtonTitle = "時系列グラフ定義終了"
         else:
             nextButtonTitle = "次のグラフ"
-        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(nextButtonTitle, on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="描画対象系列追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("描画対象系列追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象グラフ系列番号',value='')
-        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("系列削除", on_click=delete_button_clicked)
         row = ft.Row([deleteBox, deleteButton])
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
@@ -2293,12 +2293,12 @@ def mainWindow(page: ft.Page):
             nextButtonTitle = "時系列グラフ定義終了"
         else:
             nextButtonTitle = "次のグラフ"
-        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(nextButtonTitle, on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
-        addButtonParts = ft.ElevatedButton(text="描画対象系列追加", on_click=add_button_clicked)
+        addButtonParts = ft.ElevatedButton("描画対象系列追加", on_click=add_button_clicked)
         addButton = ft.Row([addButtonParts])
         deleteBox = ft.TextField(label='削除対象グラフ系列番号',value='')
-        deleteButton = ft.ElevatedButton(text="系列削除", on_click=delete_button_clicked)
+        deleteButton = ft.ElevatedButton("系列削除", on_click=delete_button_clicked)
         row = ft.Row([deleteBox, deleteButton])
         errorField = ft.Text('')
         nextErrorField = ft.Text('')
@@ -2396,7 +2396,7 @@ def mainWindow(page: ft.Page):
         subTitle2 = ft.Text('相関分析を行うデータ系列の組み合わせ入力', size=24)
         comment1 = ft.Text('上記のデータ系列から，何組の相関分析を行うか入力してください．相関分析を行わない場合は，「0」を入力してください．')
         inputBox = ft.TextField(label='相関分析組み合わせ数',value='')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
         #tmp = [appBar, line, subTitle1, lv1, line, subTitle2, comment1, inputBox, errorField, line, nextButton]
@@ -2474,7 +2474,7 @@ def mainWindow(page: ft.Page):
             nextButtonTitle = "散布図定義終了"
         else:
             nextButtonTitle = "次の散布図"
-        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(nextButtonTitle, on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
         #tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, data_h_Select, data_v_Select, subTitle2, comment2, dataLabel_h_Box, dataLabel_v_Box, line, subTitle3, comment3, graphTitleBox, graph_h_TitleBox, graph_v_TitleBox, line, errorField, nextButton]
@@ -2563,7 +2563,7 @@ def mainWindow(page: ft.Page):
             nextButtonTitle = "散布図定義終了"
         else:
             nextButtonTitle = "次の散布図"
-        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(nextButtonTitle, on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
         #tmp = [appBar, subTitle0, comment0, lv0, line, subTitle1, comment1, data_h_Select, data_v_Select, subTitle2, comment2, dataLabel_h_Box, dataLabel_v_Box, line, subTitle3, comment3, graphTitleBox, graph_h_TitleBox, graph_v_TitleBox, line, errorField, nextButton]
@@ -2640,7 +2640,7 @@ def mainWindow(page: ft.Page):
         comment3 = ft.Text('ルールを構成するプログラムを作成するために，Javascriptのライブラリが必要な場合，その数を入力してください．不要な場合は「0」としてください．')
         comment4 = ft.Text('なお，定義無しに利用できるライブラリも存在するため，詳細はマニュアルやヘルプを参照してください．')
         libraryBox = ft.TextField(label='ライブラリ数',value='')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
         lv.controls.append(line)
@@ -2705,7 +2705,7 @@ def mainWindow(page: ft.Page):
             nextButtonTitle = "ルール定義終了"
         else:
             nextButtonTitle = "次のルール"
-        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(nextButtonTitle, on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
         #
@@ -2771,7 +2771,7 @@ def mainWindow(page: ft.Page):
             nextButtonTitle = "ルール定義終了"
         else:
             nextButtonTitle = "次のルール"
-        nextButtonParts = ft.ElevatedButton(text=nextButtonTitle, on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton(nextButtonTitle, on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
         errorField = ft.Text('')
         #
@@ -2832,7 +2832,7 @@ def mainWindow(page: ft.Page):
             lv.controls.append(crossoriginBox)
             lv.controls.append(referrerpolicyBox)
         errorField = ft.Text('')
-        nextButtonParts = ft.ElevatedButton(text="Next", on_click=next_button_clicked)
+        nextButtonParts = ft.ElevatedButton("Next", on_click=next_button_clicked)
         nextButton = ft.Row([nextButtonParts])
         #tmp = [appBar, subTitle0, lv, line, errorField, nextButton]
         lv.controls.append(line)
@@ -2886,7 +2886,7 @@ def mainWindow(page: ft.Page):
         )
         page.overlay.append(pick_output_file_dialog)
         selected_output_file = ft.Text()
-        exec_button = ft.ElevatedButton(text="設定ファイル出力", on_click=exec_button_clicked)
+        exec_button = ft.ElevatedButton("設定ファイル出力", on_click=exec_button_clicked)
         warning_message = ft.Text()
         row = ft.Row(
             [
@@ -2894,7 +2894,7 @@ def mainWindow(page: ft.Page):
                 warning_message,
             ]
         )
-        finish_button_parts = ft.ElevatedButton(text="終了", on_click=lambda e: page.window.destroy())
+        finish_button_parts = ft.ElevatedButton("終了", on_click=lambda e: page.window.destroy())
         finish_button = ft.Row([finish_button_parts])
         #lv = ft.ListView(spacing=10, padding=20, auto_scroll=True)
         lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)

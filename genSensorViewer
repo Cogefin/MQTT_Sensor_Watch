@@ -389,7 +389,7 @@ def errorWindow(page: ft.Page):
     appBar = ft.AppBar(title=ft.Text("Error"),bgcolor=ft.Colors.RED)
     error_field = ft.Text(error)
     line = ft.Divider(height=2, color="black")
-    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
+    finish_button = ft.ElevatedButton("Close", on_click=lambda e: page.window.destroy())
     page.add(
         appBar,
         error_field,
@@ -486,7 +486,7 @@ def fileWindow(page: ft.Page):
     page.overlay.append(pick_input_file_dialog)
     page.overlay.append(pick_output_file_dialog)
 
-    exec_button = ft.ElevatedButton(text="Generate viewer HTML page", on_click=exec_button_clicked)
+    exec_button = ft.ElevatedButton("Generate viewer HTML page", on_click=exec_button_clicked)
     warning_message = ft.Text()
     row = ft.Row(
             [
@@ -494,7 +494,7 @@ def fileWindow(page: ft.Page):
                 warning_message,
             ]
         )
-    finish_button = ft.ElevatedButton(text="Close", on_click=lambda e: page.window.destroy())
+    finish_button = ft.ElevatedButton("Close", on_click=lambda e: page.window.destroy())
     lv = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
     lv.controls.append(subTitle1)
     lv.controls.append(config_file_button)
