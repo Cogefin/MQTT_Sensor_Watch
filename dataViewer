@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import http.server
+import socketserver
+
+import threading
+
+import flet as ft
+import asyncio
+
+import webbrowser
+
+import yaml
+import os
+
+
+# IP configuration for help
+PORT_RANGE=100
+PORT_LOWER_LIMIT = 8000
+
+
+# HELP page information
+url_header = "http://localhost:"
+LOCAL_HOST_IP = "127.0.0.1"
+
+# target directory for data viewer
+#TARGET_DIRECTORY = "data/"
+TARGET_DIRECTORY = "."
+
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=TARGET_DIRECTORY, **kwargs)
+
+
+def documentServer():
+    global PORT
+    flag=True
+    PORT=PORT_LOWER_LIMIT
+    while flag:
+        try:
+            with socketserver.TCPServer((LOCAL_HOST_IP, PORT), Handler) as httpd:
+                print(PORT)
+                flag=False
+                httpd.serve_forever()
+        except Exception as e:
+            PORT+=1
+
+def mainWindow(page: ft.Page):
+    #def icon_clicked(e):
+    #    global PORT, url_header
+    #    url = url_header + str(PORT) + "/data/"
+    #    webbrowser.open(url)
+
+    def createViewMain():
+        #global error
+        def data_view_button_clicked(e):
+            global PORT, url_header
+            url = url_header + str(PORT) # + "/data/bme280.html"
+            webbrowser.open(url)
+
+        #global lastView
+        #lastView = "/viewError"
+        page.title = "Data Viewer"
+        #page.window_width = 800
+        #page.window_height = 500
+        page.autoscroll = True
+        pageTitleBar = ft.AppBar(
+            title=ft.Text("データ分析結果表示"),
+            bgcolor=ft.Colors.YELLOW,
+            actions=[
+                #ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
+            ]
+        )
+        data_view_button = ft.Button(content="データ分析結果表示", on_click=data_view_button_clicked)
+        return ft.View(route="/viewMain", controls=[
+            ft.SafeArea(
+                content=ft.Column(
+                    controls=[
+                        pageTitleBar,
+                        data_view_button,
+                    ],
+                ),
+            )   
+        ])
+
+    def route_change(handler):
+        #global configuration, lastView
+        page.views.clear()
+        if page.route == "/viewMain":
+            page.views.append(createViewMain())
+        page.update()
+    page.on_route_change = route_change
+    asyncio.create_task(page.push_route("/viewMain"))
+
+if __name__ == "__main__":
+    thread = threading.Thread(target=documentServer, daemon=True) # 処理を割り当てる
+    thread.start() # スレッドを起動する
+    ft.run(mainWindow)
+
