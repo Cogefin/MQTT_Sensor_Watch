@@ -39,7 +39,7 @@ def documentServer():
     while flag:
         try:
             with socketserver.TCPServer((LOCAL_HOST_IP, PORT), Handler) as httpd:
-                print(PORT)
+                #print(PORT)
                 flag=False
                 httpd.serve_forever()
         except Exception as e:
@@ -65,13 +65,13 @@ def mainWindow(page: ft.Page):
         #page.window_height = 500
         page.autoscroll = True
         pageTitleBar = ft.AppBar(
-            title=ft.Text("データ分析結果表示"),
+            title=ft.Text("データ可視化アプリ用Webサーバ"),
             bgcolor=ft.Colors.YELLOW,
             actions=[
                 #ft.IconButton(icon = ft.Icons.HELP_CENTER, on_click=icon_clicked),
             ]
         )
-        data_view_button = ft.Button(content="データ分析結果表示", on_click=data_view_button_clicked)
+        data_view_button = ft.Button(content="ブラウザ起動", on_click=data_view_button_clicked)
         return ft.View(route="/viewMain", controls=[
             ft.SafeArea(
                 content=ft.Column(
